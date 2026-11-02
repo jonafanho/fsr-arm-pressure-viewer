@@ -1,4 +1,4 @@
-"""Rigidity V3/V4/V5 wire protocol for ESP32-C3 Super Mini Duo v2.
+"""Rigidity V3/V4/V5 wire protocol for the ESP32 FSR board.
 
 V3 samples are 144 bytes, V4 samples are 344 bytes, and V5 events are 56 bytes.
 All are little endian and protected by CRC32/IEEE. The sample format keeps
@@ -57,6 +57,9 @@ def decode_frame(frame: bytes) -> dict:
     result = {
         'kind': 'sample', 'protocol_version': frame[2],
         "flags": frame[3],
+        # Bit 0x04 is set by the eight-FSR-only firmware. It tells the local
+        # service not to count the intentionally empty IMU fields as faults.
+        "fsr_only": bool(frame[3] & 0x04),
         "sample_id": sample_id,
         "raw_time_us": raw_time_us,
         "reset_count": reset_count,

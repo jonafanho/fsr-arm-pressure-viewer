@@ -123,7 +123,7 @@ footer { padding: 24px 4px 0; font-size: 12px; line-height: 1.7; }
   .record-actions button { flex: 1 1 140px; }
 }
 
-/* Keep both hardware panels readable side by side on a laptop. */
+/* Device panels stay readable on a laptop. */
 @media (min-width: 360px) and (max-width: 620px) {
   .device-monitor .topbar { padding: 16px; gap: 10px; }
   .device-monitor h1 { font-size: 24px; letter-spacing: -.02em; }

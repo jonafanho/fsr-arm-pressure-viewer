@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ESP32-C3 Super Mini Duo v2 · Device Monitor</title>
+    <title>ESP32-WROOM-32 · 8 FSR Monitor</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body class="device-monitor">
     <main class="app-shell">
       <header class="topbar panel-surface">
         <div>
-          <p class="eyebrow">RIGIDITY ASSESS / BNO080 + 8 FSR</p>
-          <h1>ESP32-C3 Super Mini Monitor</h1>
+          <p class="eyebrow">ESP32-WROOM-32 / NODEMCU-32 / 8 FSR</p>
+          <h1>8 路 FSR 采集板</h1>
           <p id="connectionText" class="muted">Waiting for the local acquisition service.</p>
         </div>
         <div id="statusPill" class="status-pill" aria-live="polite">
@@ -22,15 +22,14 @@
       <section class="toolbar panel-surface" aria-label="Connection controls">
         <label class="control-group">数据来源
           <select id="source">
-            <option value="usb">USB 串口</option>
-            <option value="wifi">Wi-Fi / TCP</option>
+            <option value="usb">USB 串口（921600 baud）</option>
+            <option value="wifi" disabled>Wi-Fi / TCP（本固件不支持）</option>
             <option value="demo">模拟演示（非真实数据）</option>
           </select>
         </label>
         <label id="usbFields" class="control-group grow">串口设备
           <select id="port"><option value="">Loading ports…</option></select>
-        </label>
-        <label id="wifiFields" class="control-group grow" hidden>Device IP
+        </label>        <label id="wifiFields" class="control-group grow" hidden>Device IP
           <input id="host" value="" placeholder="192.168.1.100" spellcheck="false" />
           <select id="discovered" aria-label="Discovered ESP32 IP addresses" hidden></select>
         </label>
@@ -46,11 +45,11 @@
           <button id="discover" class="secondary" type="button" hidden>Discover</button>
           <button id="connect" type="button">连接</button>
           <button id="disconnect" class="secondary" type="button" disabled>断开</button>
-          <button id="zero" class="secondary" type="button" disabled>当前姿态归零</button>
+          <button id="zero" class="secondary" type="button" disabled hidden data-imu>当前姿态归零</button>
         </div>
       </section>
 
-      <p id="message" class="message" role="status" aria-live="polite">Connect starts live acquisition only. Use the shared Record button above both device panels.</p>
+      <p id="message" class="message" role="status" aria-live="polite">Connect starts live acquisition only. Use the Record button on the pressure-map page to save and export data.</p>
 
       <section class="status-grid" aria-label="Acquisition status">
         <article><span>采样速率</span><strong id="metric-input_rate">-- Hz</strong></article>
@@ -58,21 +57,21 @@
         <article><span>设备时间</span><strong id="metric-device_time">-- s</strong></article>
         <article><span>实时缓存</span><strong id="metric-retained_rows">0 rows</strong></article>
         <article><span>数据质量</span><strong id="metric-frame_health">0 rejected / 0 missing</strong></article>
-        <article><span>零偏校准（保持静止）</span><strong id="metric-calibration">Hold still · 0 / 200</strong></article>
-        <article><span>速度估计质量</span><strong id="metric-velocity_quality">--</strong></article>
-        <article class="wide"><span>BNO Accuracy · Accel / Gyro / Linear / Quat</span><strong id="metric-report_status">--</strong></article>
-        <article class="wide"><span>Relative Attitude</span><strong id="metric-attitude_quality">Waiting for quaternion</strong></article>
+        <article hidden data-imu><span>零偏校准（保持静止）</span><strong id="metric-calibration">Hold still · 0 / 200</strong></article>
+        <article hidden data-imu><span>速度估计质量</span><strong id="metric-velocity_quality">--</strong></article>
+        <article class="wide" hidden data-imu><span>BNO Accuracy · Accel / Gyro / Linear / Quat</span><strong id="metric-report_status">--</strong></article>
+        <article class="wide" hidden data-imu><span>Relative Attitude</span><strong id="metric-attitude_quality">Waiting for quaternion</strong></article>
         <article class="wide"><span>Pipeline</span><strong id="metric-pipeline">Acquisition stopped</strong></article>
         <article class="wide"><span>Recording</span><strong id="metric-recording">Not recording</strong></article>
       </section>
 
-      <section class="panel panel-surface" aria-label="BNO080 sensor readings">
+      <section class="panel panel-surface" aria-label="BNO080 sensor readings" hidden data-imu>
         <div class="panel-head"><div><p class="eyebrow">SENSOR REPORTS</p><h2>BNO080 传感器读数</h2></div><span>Accuracy: 0 unreliable · 1 low · 2 medium · 3 high</span></div>
         <p class="muted">Available reports remain visible before calibration. Check report age and accuracy before using them.</p>
         <div id="rawMetrics" class="metric-groups"></div>
       </section>
 
-      <section class="panel panel-surface" aria-label="Kinematic readings">
+      <section class="panel panel-surface" aria-label="Kinematic readings" hidden data-imu>
         <div class="panel-head"><div><p class="eyebrow">CURRENT SAMPLE</p><h2>运动学估计值</h2></div><span>XYZ components and magnitude</span></div>
         <div id="kinematicMetrics" class="metric-groups"></div>
         <p id="motionNotice" class="muted motion-notice">Numeric estimates remain visible with quality warnings. Missing data pauses velocity integration.</p>
@@ -105,7 +104,7 @@
         <p id="recordPath" class="path">Save location: local data directory</p>
       </section>
 
-      <section class="panel panel-surface" aria-label="Kinematic charts">
+      <section class="panel panel-surface" aria-label="Kinematic charts" hidden data-imu>
         <div class="panel-head"><div><p class="eyebrow">LIVE WAVEFORMS</p><h2>运动信号波形</h2></div><span>Bounded and downsampled for long sessions</span></div>
         <div id="kinematicCharts" class="chart-grid"></div>
       </section>
@@ -116,7 +115,7 @@
       </section>
 
       <footer class="muted">
-        Available BNO080 reports and all eight FSR channels are shown above. V4 recordings retain individual FSR ADC conversions and any raw IMU reports enabled by the firmware. FSR voltage is ADC / 4095 × 3.3 V. Velocity is an estimate, displayed even when quality is unverified.
+        8 路 FSR 由 ESP32-WROOM-32E 的 ADC 采集，经 USB 串口以 921600 baud 发送。FSR 电压 = ADC / 4095 × 3.3 V。GPIO 32/33/34/35 为 ADC1，GPIO 25/26/27/13 为 ADC2；本固件不使用 Wi-Fi，因此 ADC2 可用。记录与 ZIP 导出由本机 Python 服务完成。
       </footer>
     </main>
     <script src="./app.js" defer></script>

@@ -22,7 +22,7 @@ def main():
     finally:
         connection.close()
     if health:
-        if health.get('app') != 'super-mini-duo-local' or health.get('frontend') != str(server.FRONTEND):
+        if health.get('app') != 'fsr-single' or health.get('frontend') != str(server.FRONTEND):
             raise SystemExit('这个端口已有其他程序，请使用 --port 指定另一个端口。')
         print('前端已经运行，正在打开页面。原来的终端窗口需要保持开启。')
         webbrowser.open(url)

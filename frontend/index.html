@@ -2,31 +2,31 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>左右双板采集 · ESP32-C3 Super Mini Duo</title>
+  <title>8 路 FSR 实时采集 · ESP32-WROOM-32E</title>
   <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="duo.css">
-  <script src="duo.js?v=20261030-download2" defer></script>
+  <script src="duo.js?v=20261103-single" defer></script>
 </head>
 <body>
   <main class="duo-shell">
     <header class="duo-header">
-      <div><p class="eyebrow">ESP32-C3 SUPER MINI DUO / BNO080 + 8 FSR</p><h1>左右双板实时采集</h1></div>
+      <div><p class="eyebrow">ESP32-WROOM-32E / NODEMCU-32 / 8 FSR</p><h1>8 路 FSR 实时采集</h1></div>
       <div><strong id="sessionTime">00:00:00</strong><p id="sessionStatus" role="status">Not recording</p></div>
     </header>
-    <section class="panel-surface session-panel" aria-label="Record both devices">
+    <section class="panel-surface session-panel" aria-label="Record the FSR board">
       <div class="session-controls">
         <label class="control-group">记录文件夹 <input id="folderName" maxlength="100" placeholder="选填，例如 subject-01_trial-01"></label>
         <label class="control-group grow">实验备注 <input id="note" maxlength="1000" placeholder="佩戴位置、动作、实验条件…"></label>
         <button id="record" disabled>开始记录</button>
         <button id="stop" class="secondary" disabled>停止记录</button>
       </div>
-      <p>① 连接左右设备 → ② 开始记录 → ③ 停止记录 → ④ 下载本次数据。无需到文件夹里寻找文件。</p>
-      <div class="session-controls"><button id="reconnectA" class="secondary">连接 / 重连左侧 A</button><span id="quickA" role="status">检查连接中</span><button id="reconnectB" class="secondary">连接 / 重连右侧 B</button><span id="quickB" role="status">检查连接中</span></div>
-      <p>USB：插好线后点对应按钮。Wi-Fi或首次选择设备：点击下方“连接、读数与波形”。掉线后重连会继续同一次记录，缺失时段保留。</p>
+      <p>① 连接采集板 → ② 开始记录 → ③ 停止记录 → ④ 下载本次数据。数据由本机 Python 服务保存，不依赖浏览器。</p>
+      <div class="session-controls"><button id="reconnect" class="secondary">连接 / 重连采集板</button><span id="quickStatus" role="status">检查连接中</span></div>
+      <p>USB：插好数据线后点上方按钮，服务会自动选择 CH340 串口；也可到“连接、读数与波形”里手动选择。串口为 921600 baud；固件不使用 Wi-Fi。</p>
       <button id="downloadLatest" class="secondary" disabled>下载本次数据（ZIP）</button>
-      <p>下载内容包括左右原始数据、时间戳、所有分段和记录说明。通常保存在电脑“下载 / Downloads”文件夹；若浏览器询问位置，请选择“下载”。本地原文件仍保留。</p>
+      <p>下载内容包括 8 路 FSR 原始 ADC、电压、时间戳和记录说明。通常保存在电脑“下载 / Downloads”文件夹；若浏览器询问位置，请选择“下载”。本地原文件仍保留。</p>
       <details><summary>查看并下载所有历史记录</summary><button id="refreshRecordings" class="secondary">刷新记录列表</button><div id="recordingsList">正在读取…</div></details>
-      <p id="message" role="status">Connect A and/or B below. One recording button, separate files. USB and Wi-Fi can be mixed.</p>
-      <p id="recordPath" class="path">Each session contains separate A and B folders.</p>
+      <p id="message" role="status">Connect the FSR board below. One recording button, one CSV/ZIP per session.</p>
+      <p id="recordPath" class="path">Recordings are stored in the local data folder.</p>
     </section>
     <nav class="view-tabs" role="tablist" aria-label="采集视图">
       <button id="pressureTab" type="button" role="tab" aria-selected="true" aria-controls="pressureView">受压分布</button>
@@ -34,7 +34,7 @@
     </nav>
     <section id="pressureView" class="pressure-panel panel-surface" role="tabpanel" aria-labelledby="pressureTab">
       <header class="pressure-heading">
-        <div><p class="eyebrow">FSR / LIVE CONTACT MAP</p><h2>手臂接触区 · 实时受压分布</h2><p class="pressure-subtitle">按腕托上的实际贴片顺序显示 · 左右各 4 片</p></div>
+        <div><p class="eyebrow">FSR / LIVE CONTACT MAP</p><h2>8 路 FSR · 实时受压分布</h2><p class="pressure-subtitle">F0–F7 · 按实际贴片顺序显示</p></div>
         <label class="control-group pressure-scale-control">颜色标尺上限
           <select id="pressureRange" aria-label="颜色标尺上限">
             <option value="0.1">0.1 V · 微小变化</option>
@@ -49,63 +49,53 @@
         <div class="keyboard-outline" aria-hidden="true"></div>
         <p class="pressure-orientation">↑ 键盘方向 · 坐在键盘前看</p>
         <div class="pressure-side-headings">
-          <div><strong><i class="board-dot black"></i>左侧 · 黑色板 A</strong><span id="pressureStateA" class="pressure-connection">等待数据</span></div>
-          <div><strong><i class="board-dot white"></i>右侧 · 白色板 B</strong><span id="pressureStateB" class="pressure-connection">等待数据</span></div>
+          <div><strong><i class="board-dot black"></i>采集板 · F0–F7</strong><span id="pressureState" class="pressure-connection">等待数据</span></div>
         </div>
-        <div class="pressure-wrist-rest" aria-label="腕托贴片分布：左侧四片，中间空隙，右侧四片">
-          <div class="pressure-pads" aria-label="左侧贴片，从左到右 F0 F1 F3 F4">
-            <div id="pressureA0" class="pressure-cell unavailable" role="img" aria-label="A F0 等待数据">
-              <span class="pressure-channel">F0</span><strong id="voltageA0">—</strong><span class="pressure-unit">V</span>
+        <div class="pressure-wrist-rest" aria-label="8 片 FSR 贴片分布，从左到右 F0 到 F7">
+          <div class="pressure-pads" aria-label="8 片 FSR，从左到右 F0 到 F7">
+            <div id="pressure0" class="pressure-cell unavailable" role="img" aria-label="F0 等待数据">
+              <span class="pressure-channel">F0</span><strong id="voltage0">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureA1" class="pressure-cell unavailable" role="img" aria-label="A F1 等待数据">
-              <span class="pressure-channel">F1</span><strong id="voltageA1">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure1" class="pressure-cell unavailable" role="img" aria-label="F1 等待数据">
+              <span class="pressure-channel">F1</span><strong id="voltage1">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureA3" class="pressure-cell unavailable" role="img" aria-label="A F3 等待数据">
-              <span class="pressure-channel">F3</span><strong id="voltageA3">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure2" class="pressure-cell unavailable" role="img" aria-label="F2 等待数据">
+              <span class="pressure-channel">F2</span><strong id="voltage2">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureA4" class="pressure-cell unavailable" role="img" aria-label="A F4 等待数据">
-              <span class="pressure-channel">F4</span><strong id="voltageA4">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure3" class="pressure-cell unavailable" role="img" aria-label="F3 等待数据">
+              <span class="pressure-channel">F3</span><strong id="voltage3">—</strong><span class="pressure-unit">V</span>
             </div>
-          </div>
-          <div class="pressure-gap"><span>空隙</span><small>无测点</small></div>
-          <div class="pressure-pads" aria-label="右侧贴片，从左到右 F0 F1 F3 F4">
-            <div id="pressureB0" class="pressure-cell unavailable" role="img" aria-label="B F0 等待数据">
-              <span class="pressure-channel">F0</span><strong id="voltageB0">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure4" class="pressure-cell unavailable" role="img" aria-label="F4 等待数据">
+              <span class="pressure-channel">F4</span><strong id="voltage4">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureB1" class="pressure-cell unavailable" role="img" aria-label="B F1 等待数据">
-              <span class="pressure-channel">F1</span><strong id="voltageB1">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure5" class="pressure-cell unavailable" role="img" aria-label="F5 等待数据">
+              <span class="pressure-channel">F5</span><strong id="voltage5">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureB3" class="pressure-cell unavailable" role="img" aria-label="B F3 等待数据">
-              <span class="pressure-channel">F3</span><strong id="voltageB3">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure6" class="pressure-cell unavailable" role="img" aria-label="F6 等待数据">
+              <span class="pressure-channel">F6</span><strong id="voltage6">—</strong><span class="pressure-unit">V</span>
             </div>
-            <div id="pressureB4" class="pressure-cell unavailable" role="img" aria-label="B F4 等待数据">
-              <span class="pressure-channel">F4</span><strong id="voltageB4">—</strong><span class="pressure-unit">V</span>
+            <div id="pressure7" class="pressure-cell unavailable" role="img" aria-label="F7 等待数据">
+              <span class="pressure-channel">F7</span><strong id="voltage7">—</strong><span class="pressure-unit">V</span>
             </div>
           </div>
         </div>
-        <div class="pressure-arm-labels"><span>左臂接触区</span><span>右臂接触区</span></div>
+        <div class="pressure-arm-labels"><span>F0 → F7</span></div>
         <p class="pressure-near">靠近身体的一侧</p>
       </div>
       <div class="pressure-legend">
         <span>低电压</span><div class="pressure-scale"><div class="pressure-gradient" aria-hidden="true"></div><div class="pressure-ticks"><span>0 V</span><span id="pressureMid">1.65 V</span><span id="pressureMax">3.30 V</span></div></div><span>高电压</span>
       </div>
       <div class="pressure-summaries">
-        <article><span>左侧最高电压贴片</span><strong id="pressurePeakA">—</strong><small id="pressureDetailA">等待左侧数据</small></article>
-        <article><span>右侧最高电压贴片</span><strong id="pressurePeakB">—</strong><small id="pressureDetailB">等待右侧数据</small></article>
+        <article><span>最高电压贴片</span><strong id="pressurePeak">—</strong><small id="pressureDetail">等待数据</small></article>
       </div>
       <p id="pressureNotice" class="pressure-notice" role="status">等待实时数据。</p>
-      <p class="pressure-footnote">每个方块代表一片 FSR，颜色随电压升高而变暖；左右使用同一标尺。尚未换算为力（N）或压力（kPa），不推测片内及空隙处的分布。</p>
+      <p class="pressure-footnote">每个方块代表一片 FSR，颜色随电压升高而变暖；8 片使用同一标尺。尚未换算为力（N）或压力（kPa），不推测片内及间隙处的分布。</p>
     </section>
     <section id="monitorView" class="duo-grid" role="tabpanel" aria-labelledby="monitorTab" hidden>
       <article class="device-pane">
-        <header class="device-banner"><strong>左侧 · 黑色板（A）</strong><span id="summaryA" role="status">Disconnected</span></header>
-        <p id="detailA" class="device-detail">No samples</p>
-        <iframe src="device.html?device=A" title="左侧黑色板：连接、读数和波形"></iframe>
-      </article>
-      <article class="device-pane">
-        <header class="device-banner"><strong>右侧 · 白色板（B）</strong><span id="summaryB" role="status">Disconnected</span></header>
-        <p id="detailB" class="device-detail">No samples</p>
-        <iframe src="device.html?device=B" title="右侧白色板：连接、读数和波形"></iframe>
+        <header class="device-banner"><strong>采集板 · 8 路 FSR</strong><span id="summary" role="status">Disconnected</span></header>
+        <p id="detail" class="device-detail">No samples</p>
+        <iframe src="device.html" title="8 路 FSR：连接、读数和波形"></iframe>
       </article>
     </section>
   </main>

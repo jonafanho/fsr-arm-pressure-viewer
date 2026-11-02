@@ -7,7 +7,7 @@ const vm = require("node:vm");
 const { test } = require("node:test");
 const root = path.resolve(__dirname, "..");
 
-function loadPage(device = 'A') {
+function loadPage() {
   function node() {
     return { children: [], style: {}, dataset: {}, nodeType: 1, value: "usb", textContent: "",
       classList: { toggle() {}, contains() { return false; } },
@@ -23,7 +23,7 @@ function loadPage(device = 'A') {
       createTextNode(value) { return { nodeType: 3, nodeValue: value }; },
     },
     URLSearchParams, AbortController,
-    Node: { TEXT_NODE: 3 }, window: { location: {search:`?device=${device}`}, setTimeout() { return 1; }, clearTimeout() {} },
+    Node: { TEXT_NODE: 3 }, window: { location: {search:""}, setTimeout() { return 1; }, clearTimeout() {} },
     fetch: async (url, options) => { calls.push({url,options}); return {ok:true,json:async()=>({ok:true})}; },
   });
   const calls=[];
@@ -90,32 +90,36 @@ test('unreliable velocity is numeric in metrics and waveform, with a warning', (
   assert.equal(ui.plotPoints([snapshot.latest,next],'vx_m_s',30)[1][1],null);
 });
 
-test('A and B use separate status and connection routes; discovery is shared', async () => {
-  for (const device of ['A','B']) {
-    const {ui,calls}=loadPage(device);
-    await ui.api('status?after=5');await ui.api('connect',{source:'usb',port:'COM9'});await ui.api('discover');
-    assert.equal(calls[0].url,`/api/device/${device}/status?after=5`);
-    assert.equal(calls[1].url,`/api/device/${device}/connect`);
-    assert.equal(calls[2].url,'/api/discover');
-  }
+test('one board uses the device routes; discovery stays shared', async () => {
+  const {ui,calls}=loadPage();
+  await ui.api('status?after=5');await ui.api('connect',{source:'usb',port:'COM9'});await ui.api('discover');
+  assert.equal(calls[0].url,'/api/device/status?after=5');
+  assert.equal(calls[1].url,'/api/device/connect');
+  assert.equal(calls[2].url,'/api/discover');
 });
 
-test('global session remains active when A disconnects and B keeps recording', () => {
+test('single-board session keeps recording controls usable and reports a lost connection', () => {
   const nodes={};
-  for(const id of ['downloadLatest','refreshRecordings','recordingsList','reconnectA','reconnectB','quickA','quickB','record','stop','folderName','note','sessionTime','sessionStatus','recordPath','summaryA','summaryB','detailA','detailB','message']) nodes[id]={addEventListener(){}};
+  for(const id of ['downloadLatest','refreshRecordings','recordingsList','reconnect','quickStatus','record','stop','folderName','note','sessionTime','sessionStatus','recordPath','summary','detail','message']) nodes[id]={addEventListener(){}};
   const context=vm.createContext({document:{getElementById:id=>nodes[id]},Date,
     setTimeout(){},AbortSignal,fetch(){},});
   nodes.record.addEventListener=nodes.stop.addEventListener=()=>{};
   vm.runInContext(fs.readFileSync(path.join(root,'duo.js'),'utf8').replace('void tick();','globalThis.renderDuo=render;'),context);
   const a={active:false,error:'Cable removed',recorded:50};
-  const b={active:true,recording:true,source:'wifi',input_rate_hz:100,recorded:100,
-    latest:{pc_epoch_ms:Date.now(),protocol_version:4,raw_complete:1}};
-  context.renderDuo({recording:true,path:'trial',elapsed_ms:1000,devices:{A:a,B:b}});
+  context.renderDuo({recording:true,path:'trial',elapsed_ms:1000,device:a});
   assert.equal(nodes.stop.disabled,false);
   assert.equal(nodes.record.disabled,true);
-  assert.match(nodes.message.textContent,/ESP32 A.*Cable removed/);
-  assert.match(nodes.summaryB.textContent,/Live.*WIFI/);
-  assert.match(nodes.detailB.textContent,/Recording 100/);
+  assert.match(nodes.message.textContent,/Cable removed/);
+  assert.match(nodes.summary.textContent,/connection lost/);
+  assert.match(nodes.detail.textContent,/Not recording.*50 samples/);
+
+  const live={active:true,recording:true,source:'usb',input_rate_hz:100,recorded:100,
+    latest:{pc_epoch_ms:Date.now(),fsr_only:true,protocol_version:3,raw_complete:0}};
+  context.renderDuo({recording:true,path:'trial',elapsed_ms:1000,device:live});
+  assert.equal(nodes.stop.disabled,false);
+  assert.equal(nodes.record.disabled,true);
+  assert.match(nodes.summary.textContent,/Live.*USB.*100.0 Hz/);
+  assert.match(nodes.detail.textContent,/8 FSR firmware/);
 });
 
 test("calibration success and current reliability are independent", () => {

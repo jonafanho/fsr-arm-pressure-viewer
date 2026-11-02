@@ -24,22 +24,24 @@ function page() {
   return { ...context.testMap, nodes };
 }
 
-function device(values = [.1, .2, .3, .4], extra = {}) {
-  return { active: true, source: 'usb', input_rate_hz: 100, latest: { pc_epoch_ms: Date.now(),
-    F0_V: values[0], F1_V: values[1], F2_V: 3.3, F3_V: values[2], F4_V: values[3], F5_V: 3.3 }, ...extra };
+function device(values = [.1, .2, .3, .4, .5, .6, .7, .8], extra = {}) {
+  const latest = { pc_epoch_ms: Date.now(), fsr_only: true };
+  for (let index = 0; index < 8; index += 1) latest[`F${index}_V`] = values[index];
+  return { active: true, source: 'usb', input_rate_hz: 100, latest,
+    recording: false, path: '', recorded: 0, missing: 0, error: '', ...extra };
 }
 
-test('physical layout uses F0, F1, F3, F4 and excludes unused channels', () => {
+test('the map uses all eight channels in physical order', () => {
   const { model } = page();
   const result = model.reading(device(), Date.now());
-  assert.deepEqual(Array.from(result.values), [.1, .2, .3, .4]);
-  assert.deepEqual(Array.from(result.peaks), [4]);
+  assert.deepEqual(Array.from(result.values), [.1, .2, .3, .4, .5, .6, .7, .8]);
+  assert.deepEqual(Array.from(result.peaks), [7]);
 });
 
 test('zero voltage remains valid; missing and out-of-range voltages remain unavailable', () => {
   const { model } = page();
-  const result = model.reading(device([0, null, -1, 3.4]), Date.now());
-  assert.equal(result.valid, 1);
+  const result = model.reading(device([0, null, -1, 3.4, .5, .6, .7, .8]), Date.now());
+  assert.equal(result.valid, 5);
   assert.equal(result.values[0], 0);
   assert.equal(result.values[1], null);
   assert.equal(result.values[2], null);
@@ -52,46 +54,48 @@ test('stale and disconnected sensors cannot leave a live-looking heat map', () =
   const { model, renderPressure, nodes } = page();
   const d = device();
   assert.equal(model.reading(d, d.latest.pc_epoch_ms + 1501).state, 'stale');
-  renderPressure({ devices: { A: d, B: { ...d, active: false } } }, d.latest.pc_epoch_ms + 1600);
-  assert.equal(nodes.voltageA0.textContent, '—');
-  assert.equal(nodes.voltageB0.textContent, '—');
-  assert.equal(nodes.pressureA0.style.backgroundColor, '');
-  assert.match(nodes.pressureStateA.textContent, /过期/);
-  assert.match(nodes.pressureStateB.textContent, /未连接/);
+  renderPressure({ device: d }, d.latest.pc_epoch_ms + 1600);
+  for (let channel = 0; channel < 8; channel += 1) {
+    assert.equal(nodes[`voltage${channel}`].textContent, '—');
+    assert.equal(nodes[`pressure${channel}`].style.backgroundColor, '');
+  }
+  assert.match(nodes.pressureState.textContent, /过期/);
+  renderPressure({ device: { ...d, active: false } });
+  assert.match(nodes.pressureState.textContent, /未连接/);
 });
 
-test('left and right use independent readings with the same fixed colour scale', () => {
+test('all eight pads share one fixed colour scale and report the peak', () => {
   const { renderPressure, nodes } = page();
-  renderPressure({ devices: { A: device([.1, .5, .2, .3]), B: device([.5, .1, .2, 1.2]) } });
-  assert.equal(nodes.voltageA1.textContent, '0.500');
-  assert.equal(nodes.voltageB0.textContent, '0.500');
-  assert.equal(nodes.pressureA1.style.backgroundColor, nodes.pressureB0.style.backgroundColor);
-  assert.match(nodes.pressurePeakA.textContent, /^F1 · 0.500 V$/);
-  assert.match(nodes.pressurePeakB.textContent, /^F4 · 1.200 V$/);
+  renderPressure({ device: device([.1, .5, .2, .3, .4, .5, .7, 1.2]) });
+  assert.equal(nodes.voltage1.textContent, '0.500');
+  assert.equal(nodes.voltage7.textContent, '1.200');
+  assert.equal(nodes.pressure1.style.backgroundColor, nodes.pressure5.style.backgroundColor);
+  assert.match(nodes.pressurePeak.textContent, /^F7 · 1.200 V$/);
+  assert.match(nodes.pressureDetail.textContent, /8\/8/);
 });
 
 test('lowering the colour limit clips only the colour, never the actual voltage', () => {
   const { render, nodes, model } = page();
-  render({ devices: { A: device([2.5, .2, .3, .4]), B: device() }, elapsed_ms: 0, path: 'data', recording: false });
+  render({ device: device([2.5, .2, .3, .4, .5, .6, .7, .8]), elapsed_ms: 0, path: 'data', recording: false });
   nodes.pressureRange.value = '0.5';
   nodes.pressureRange.listeners.change();
-  assert.equal(nodes.voltageA0.textContent, '2.500');
-  assert.equal(nodes.pressureA0.style.backgroundColor, model.color(.5, .5).background);
-  assert.ok(nodes.pressureA0.classList.contains('over-range'));
+  assert.equal(nodes.voltage0.textContent, '2.500');
+  assert.equal(nodes.pressure0.style.backgroundColor, model.color(.5, .5).background);
+  assert.ok(nodes.pressure0.classList.contains('over-range'));
   assert.match(nodes.pressureNotice.textContent, /超过颜色上限/);
 });
 
-test('service failure clears both sides and demo mode is explicitly labelled', () => {
+test('service failure clears the map and demo mode is explicitly labelled', () => {
   const { renderPressure, nodes } = page();
-  renderPressure({ devices: { A: device(), B: device(undefined, { source: 'demo' }) } });
-  assert.match(nodes.pressureStateB.textContent, /模拟数据/);
+  renderPressure({ device: device(undefined, { source: 'demo' }) });
+  assert.match(nodes.pressureState.textContent, /模拟数据/);
   renderPressure(null);
-  assert.equal(nodes.voltageA0.textContent, '—');
-  assert.equal(nodes.voltageB4.textContent, '—');
+  assert.equal(nodes.voltage0.textContent, '—');
+  assert.equal(nodes.voltage7.textContent, '—');
   assert.match(nodes.pressureNotice.textContent, /本地服务未连接/);
 });
 
-test('view switching preserves access to the original monitor and recording controls', () => {
+test('view switching preserves access to the monitor and recording controls', () => {
   const { showView, nodes } = page();
   assert.equal(nodes.pressureView.hidden, false);
   assert.equal(nodes.monitorView.hidden, true);

@@ -1,4 +1,4 @@
-"""Local acquisition and recording service for the ESP32-C3 Super Mini Duo v2.
+"""Local acquisition and recording service for one ESP32 FSR board.
 
 The service, rather than the browser, owns USB/TCP reads and CSV writes.  Live
 rows are kept in a bounded ring while an active recording is streamed directly
@@ -78,7 +78,7 @@ CSV_FIELDS = [
     "bno_diagnostic_code", *(f"raw_fsr{i}_adc" for i in range(FSR_COUNT)),
     *(f"F{i}_V" for i in range(FSR_COUNT)), *KINEMATIC_FIELDS, *QUALITY_FIELDS, "crc32",
 ]
-CSV_FIELDS += EXTRA_FIELDS + ['device_slot', 'session_elapsed_ms', 'velocity_estimate_valid',
+CSV_FIELDS += EXTRA_FIELDS + ['session_elapsed_ms', 'velocity_estimate_valid',
     'velocity_preview', 'velocity_segment', 'velocity_reason', 'radius_reliable', 'raw_complete']
 
 
@@ -621,6 +621,67 @@ def discover(timeout=1.25):
     return list(found.values())
 
 
+CH340_VID = 0x1A86
+CH340_PIDS = {0x7522, 0x7523, 0x5523, 0x55D4}
+CP210X_VID = 0x10C4
+FTDI_VID = 0x0403
+
+
+def port_kind(port):
+    """Classify a pyserial ListPortInfo by its USB-serial bridge chip."""
+    vid = getattr(port, "vid", None)
+    pid = getattr(port, "pid", None)
+    if vid == CH340_VID or (pid is not None and pid in CH340_PIDS):
+        return "ch340"
+    if vid == CP210X_VID:
+        return "cp210x"
+    if vid == FTDI_VID:
+        return "ftdi"
+    text = " ".join(str(getattr(port, name, "") or "") for name in
+                    ("description", "manufacturer", "hwid", "product")).lower()
+    if "ch340" in text or "ch341" in text:
+        return "ch340"
+    if "cp210" in text:
+        return "cp210x"
+    if "ftdi" in text or "ft232" in text or "ft2232" in text:
+        return "ftdi"
+    return "unknown"
+
+
+def serial_port_list():
+    """Every serial port as a plain dict, annotated with its bridge chip."""
+    ports = []
+    for port in (list_ports.comports() if list_ports else []):
+        kind = port_kind(port)
+        ports.append(dict(
+            device=port.device,
+            description=getattr(port, "description", "") or "",
+            manufacturer=getattr(port, "manufacturer", "") or "",
+            serial_number=getattr(port, "serial_number", "") or "",
+            hwid=getattr(port, "hwid", "") or "",
+            vid=getattr(port, "vid", None),
+            pid=getattr(port, "pid", None),
+            kind=kind,
+            ch340=kind == "ch340",
+        ))
+    return ports
+
+
+def choose_port(ports):
+    """Pick the port to connect automatically, or None when ambiguous.
+
+    With a single board there is nothing to disambiguate: a lone port is used
+    as-is, otherwise a single CH340 bridge (the NodeMCU-32 V1.3 USB chip) wins
+    over unrelated adapters. Two or more CH340 boards stay a manual choice.
+    """
+    if len(ports) == 1:
+        return ports[0]
+    ch340 = [port for port in ports if port.get("ch340")]
+    if len(ch340) == 1:
+        return ch340[0]
+    return None
+
+
 def valid_folder_name(value):
     if not isinstance(value, str):
         return False
@@ -690,7 +751,10 @@ class Acquisition:
                 raise ValueError("pyserial is missing. Install requirements.txt first.")
             port = str(config.get("port", "")).strip()
             if not port:
-                raise ValueError("Select a serial port.")
+                chosen = choose_port(serial_port_list())
+                if chosen is None:
+                    raise ValueError("Select a serial port; no unique CH340 adapter was detected.")
+                port = chosen["device"]
             connection = serial.Serial(port, 921600, timeout=0.1)
         elif source == "wifi":
             host = str(config.get("host", "")).strip()
@@ -853,7 +917,7 @@ class Acquisition:
         epoch_ms = time.time_ns() / 1e6
         pc_elapsed_ms = (now_ns - self.started_ns) / 1e6
         values, quality = self.motion.process(raw, self.extended_time)
-        if not quality.get("imu_valid"):
+        if not quality.get("imu_valid") and not raw.get("fsr_only"):
             self.sensor_faults += 1
         row = {
             "pc_time_iso": datetime.fromtimestamp(epoch_ms / 1000, timezone.utc).isoformat(timespec="milliseconds"),
@@ -862,7 +926,8 @@ class Acquisition:
             "sample_id": raw["sample_id"], "device_time_us": self.extended_time,
             "device_elapsed_ms": (self.extended_time - self.device_start_time) / 1000.0,
             "device_dt_us": device_dt_us, "missing_before": 0 if previous is None else max(0, ((raw["sample_id"] - previous["sample_id"]) & 0xFFFFFFFF) - 1),
-            "flags": raw["flags"], "imu_reset_count": raw["reset_count"],
+            "flags": raw["flags"], "fsr_only": int(raw.get("fsr_only", False)),
+            "imu_reset_count": raw["reset_count"],
             "heading_accuracy_rad": raw["heading_accuracy"], "fresh_mask": raw["fresh_mask"],
             "bno_diagnostic_code": raw["diagnostic_code"], "crc32": f'{raw["crc32"]:08x}',
         }
@@ -1006,6 +1071,8 @@ class Acquisition:
             return "Acquisition stopped"
         if latest is None:
             return "Waiting for a valid V3/V4 frame"
+        if latest.get("fsr_only"):
+            return "8 FSR live; this firmware does not stream IMU reports"
         code = latest.get("bno_diagnostic_code")
         if code == 2:
             return "BNO080 not detected; check SPI wiring and interface mode"
@@ -1121,7 +1188,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="ESP32-C3 Super Mini Duo v2 BNO080 + 8-FSR monitor")
+    parser = argparse.ArgumentParser(description="Single ESP32 FSR monitor")
     parser.add_argument("--port", type=int, default=5182, help="local HTTP port")
     parser.add_argument("--data-dir", type=Path, default=DATA_DIR, help="recording directory")
     args = parser.parse_args()

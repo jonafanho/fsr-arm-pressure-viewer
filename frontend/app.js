@@ -1,6 +1,5 @@
 (() => {
   "use strict";
-  const DEVICE = new URLSearchParams(window.location.search).get('device') === 'B' ? 'B' : 'A';
 
   const $ = (id) => document.getElementById(id);
   const FSR_COUNT = 8;
@@ -312,7 +311,7 @@
         options.body = JSON.stringify(body);
       }
       const shared = path === 'ports' || path === 'discover';
-      const response = await fetch(`/api/${shared ? '' : `device/${DEVICE}/`}${path}`, options);
+      const response = await fetch(`/api/${shared ? '' : 'device/'}${path}`, options);
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       return result;
@@ -346,7 +345,7 @@
     const source = elements.source.value;
     elements.usbFields.hidden = elements.refresh.hidden = source !== "usb";
     elements.wifiFields.hidden = elements.discover.hidden = source !== "wifi";
-    try { localStorage.setItem(`rigidity.duo.${DEVICE}.source`, source); } catch {}
+    try { localStorage.setItem('rigidity.fsr.source', source); } catch {}
     updateButtons();
   }
 
@@ -372,16 +371,16 @@
     const selected = elements.port.value;
     const result = await api("ports");
     const options = result.ports.map((port) => {
-      const option = new Option(`${port.label || port.description || "Serial device"} · ${port.device}`, port.device);
-      option.disabled = Boolean(port.assigned_slot && port.assigned_slot !== DEVICE);
-      return option;
+      const name = port.description || port.manufacturer || "Serial device";
+      const chip = port.ch340 ? " · CH340" : port.kind && port.kind !== "unknown" ? ` · ${port.kind.toUpperCase()}` : "";
+      return new Option(`${name}${chip} · ${port.device}`, port.device);
     });
     if (!options.length) options.push(new Option(result.available ? "No serial ports found" : "Install pyserial (see README)", ""));
-    options.unshift(new Option('请选择本侧板子（未找到时请插入 USB 后刷新）', ''));
+    options.unshift(new Option('请选择采集板（CH340 会被自动选中）', ''));
     elements.port.replaceChildren(...options);
-    const matched = result.ports.find(port => port.assigned_slot === DEVICE);
-    if (matched) elements.port.value = matched.device;
-    else if (!result.device_profiles?.[DEVICE] && selected && result.ports.some(port => port.device === selected)) elements.port.value = selected;
+    const recommended = result.ports.find((port) => port.recommended);
+    if (recommended) elements.port.value = recommended.device;
+    else if (selected && result.ports.some((port) => port.device === selected)) elements.port.value = selected;
   }
 
   function resetLiveState() {
@@ -430,7 +429,7 @@
     elements.sampleDt.textContent = row && row.device_dt_us ? `${formatNumber(row.device_dt_us / 1000, 2)} ms` : "-- ms";
     elements.deviceTime.textContent = row ? `${formatNumber(row.device_elapsed_ms / 1000, 3)} s` : "-- s";
     elements.retainedRows.textContent = `${status.retained_rows || 0} rows`;
-    elements.frameHealth.textContent = `${status.rejected || 0} rejected / ${status.missing || 0} missing / ${status.sensor_faults || 0} IMU quality warnings`;
+    elements.frameHealth.textContent = `${status.rejected || 0} rejected / ${status.missing || 0} missing`;
     elements.calibration.textContent = status.calibrated ? "Bias zero complete" : `Hold still · ${status.calibration_count || 0} / ${status.calibration_target || 200}`;
     elements.calibration.className = status.calibrated ? "quality-good" : "quality-warning";
     elements.reportStatus.textContent = row ? ["accel", "gyro", "linear", "quat"].map((name) => row[`${name}_status`] ?? "--").join(" / ") : "--";
@@ -480,10 +479,22 @@
     elements.recordPath.textContent = status.path || `Save location: ${status.data_dir || "local data directory"}`;
   }
 
+  function updateSensorPanels(status) {
+    // The FSR-only firmware reports no IMU. Keep the IMU/kinematic panels out
+    // of the way until a firmware build actually streams them.
+    const row = status?.latest;
+    const hasImu = Boolean(row) && !row.fsr_only && Number.isFinite(row.accel_status);
+    if (typeof document.querySelectorAll !== "function") return;
+    for (const node of document.querySelectorAll("[data-imu]")) node.hidden = !hasImu;
+  }
+
   function updateStatusUi(status) {
     const row = status.latest;
     if (!status.active) setConnection(status.error ? "error" : "", status.error ? "Connection error" : "Disconnected", status.error || "Acquisition stopped");
     else if (!row) setConnection("waiting", "Connected · Waiting for data", status.quality_detail);
+    // This firmware streams eight FSR voltages without an IMU. Treat a finite
+    // F0 voltage as live data instead of waiting for BNO080 calibration.
+    else if (Number.isFinite(row.F0_V)) setConnection("live", status.source === "demo" ? "Demo · Live" : `Connected · ${status.source.toUpperCase()}`, status.quality_detail);
     else if (!status.calibrated || !row.attitude_reliable) setConnection("waiting", status.source === "demo" ? "Demo · Live preview" : "Connected · Live preview", status.quality_detail);
     else setConnection("live", status.source === "demo" ? "Demo · Live" : `Connected · ${status.source.toUpperCase()}`, status.quality_detail);
     if (status.active && elements.source.value !== status.source) {
@@ -495,9 +506,10 @@
     else if (status.error) message(status.error, true);
     else if (status.cursor_dropped) message("The live display skipped older buffered rows; recording on disk is unaffected.");
     else message(status.active
-      ? "Live acquisition is running. Use the shared Record button above both device panels to save."
-      : "Connect starts live acquisition only. Use the shared Record button above both device panels.");
+      ? "Live acquisition is running. Use the Record button on the pressure-map page to save."
+      : "Connect starts live acquisition only. Use the Record button on the pressure-map page to save.");
     updateMetrics(status);
+    updateSensorPanels(status);
     updateButtons();
     scheduleChartRender();
   }
@@ -637,15 +649,14 @@
 
   function loadPreferences() {
     try {
-      const source = localStorage.getItem(`rigidity.duo.${DEVICE}.source`);
+      const source = localStorage.getItem('rigidity.fsr.source');
       const history = localStorage.getItem("rigidity.supermini.history");
-      if (["usb", "wifi", "demo"].includes(source)) elements.source.value = source;
+      if (["usb", "demo"].includes(source)) elements.source.value = source;
       if ([...elements.history.options].some((option) => option.value === history)) elements.history.value = history;
     } catch {}
   }
 
   function start() {
-    document.querySelector('h1').textContent = DEVICE === 'A' ? '左侧 · 黑色板（A）' : '右侧 · 白色板（B）';
     createMetrics();
     initCharts();
     loadPreferences();
