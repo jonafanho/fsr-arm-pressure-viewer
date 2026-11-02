@@ -101,8 +101,8 @@ test('one board uses the device routes; discovery stays shared', async () => {
 test('single-board session keeps recording controls usable and reports a lost connection', () => {
   const nodes={};
   for(const id of ['downloadLatest','refreshRecordings','recordingsList','reconnect','quickStatus','record','stop','folderName','note','sessionTime','sessionStatus','recordPath','summary','detail','message']) nodes[id]={addEventListener(){}};
-  const context=vm.createContext({document:{getElementById:id=>nodes[id]},Date,
-    setTimeout(){},AbortSignal,fetch(){},});
+  const context=vm.createContext({document:{getElementById:id=>nodes[id],querySelector:()=>null,querySelectorAll:()=>[],documentElement:{}},Date,
+    setTimeout(){},AbortSignal,fetch:async()=>({ok:true,json:async()=>({})}),console});
   nodes.record.addEventListener=nodes.stop.addEventListener=()=>{};
   vm.runInContext(fs.readFileSync(path.join(root,'duo.js'),'utf8').replace('void tick();','globalThis.renderDuo=render;'),context);
   const a={active:false,error:'Cable removed',recorded:50};

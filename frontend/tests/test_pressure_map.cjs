@@ -15,8 +15,9 @@ function page() {
       addEventListener(name, callback) { this.listeners[name] = callback; }, focus() {} };
   }
   const storage = new Map();
-  const context = vm.createContext({ document: { getElementById: id => nodes[id], querySelectorAll: () => [] },
-    Date, AbortSignal, setTimeout() {}, setInterval() {}, Event: class {},
+  const context = vm.createContext({ document: { getElementById: id => nodes[id], querySelectorAll: () => [], querySelector: () => null, documentElement: {} },
+    console, Date, AbortSignal, setTimeout() {}, setInterval() {}, Event: class {},
+    fetch: async () => ({ ok: true, json: async () => ({}) }),
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) } });
   const source = fs.readFileSync(path.join(root, 'duo.js'), 'utf8').replace('void tick();',
     'globalThis.testMap = { model: FSRPressureMap, renderPressure, render, showView };');
@@ -59,9 +60,9 @@ test('stale and disconnected sensors cannot leave a live-looking heat map', () =
     assert.equal(nodes[`voltage${channel}`].textContent, '—');
     assert.equal(nodes[`pressure${channel}`].style.backgroundColor, '');
   }
-  assert.match(nodes.pressureState.textContent, /过期/);
+  assert.match(nodes.pressureState.textContent, /Data stale/);
   renderPressure({ device: { ...d, active: false } });
-  assert.match(nodes.pressureState.textContent, /未连接/);
+  assert.match(nodes.pressureState.textContent, /Disconnected/);
 });
 
 test('all eight pads share one fixed colour scale and report the peak', () => {
@@ -82,17 +83,17 @@ test('lowering the colour limit clips only the colour, never the actual voltage'
   assert.equal(nodes.voltage0.textContent, '2.500');
   assert.equal(nodes.pressure0.style.backgroundColor, model.color(.5, .5).background);
   assert.ok(nodes.pressure0.classList.contains('over-range'));
-  assert.match(nodes.pressureNotice.textContent, /超过颜色上限/);
+  assert.match(nodes.pressureNotice.textContent, /Above color maximum/);
 });
 
 test('service failure clears the map and demo mode is explicitly labelled', () => {
   const { renderPressure, nodes } = page();
   renderPressure({ device: device(undefined, { source: 'demo' }) });
-  assert.match(nodes.pressureState.textContent, /模拟数据/);
+  assert.match(nodes.pressureState.textContent, /Simulated data/);
   renderPressure(null);
   assert.equal(nodes.voltage0.textContent, '—');
   assert.equal(nodes.voltage7.textContent, '—');
-  assert.match(nodes.pressureNotice.textContent, /本地服务未连接/);
+  assert.match(nodes.pressureNotice.textContent, /Local service unavailable/);
 });
 
 test('view switching preserves access to the monitor and recording controls', () => {

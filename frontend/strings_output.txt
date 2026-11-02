@@ -1,0 +1,578 @@
+Total unique strings found: 577
+live' && sample.valid === FSRPressureMap.channels.length && !sample.demo ? 'good
+The live display skipped older buffered rows; recording on disk is unaffected.
+Home' ? 'pressure' : event.key === 'End' ? 'monitor' : name === 'pressure' ?
+record').addEventListener('click',()=>action('record/start',{folder_name:$(
+summary').textContent = label; $('summary').className = !active || stale ?
+pressureView')); function showView(view) { activeView = view === 'monitor
+).disabled = busy || active; $('quickStatus').textContent = active ? '已连接
+超过颜色上限，已显示最暖色；可调高标尺'); $('pressureNotice').textContent = notices.join('；
+downloadLatest').disabled = busy || status.recording || !device.path; $(
+); if (status.recording && !active) warnings.push('采集板已断开；请重新连接后继续保存新分段。
+pressure' ? 100 : 500); } void tick(); })(); <!doctype html> <html lang=
+).addEventListener('keydown', event => { if (!['ArrowLeft', 'ArrowRight
+暂无记录，点击“开始记录”后会出现在这里。'; } catch (e) { $('recordingsList').textContent =
+discovered'); select.replaceChildren(new Option('Select this ESP32 IP…
+demo' }; } return { channels, ranges, color, reading }; })(); (() => {
+#monitorView iframe')) { frame.contentWindow?.dispatchEvent(new Event(
+, listRecordings); $('reconnect').addEventListener('click',()=>action(
+#ffffff' : '#162c3c' }; } function reading(device, now) { let state =
+${labels.live} · ${sample.valid}/${FSRPressureMap.channels.length} 有效
+live') notices.push(label); else if (sample.valid < 8) notices.push(
+可依次轻按每片，核对亮起的位置。电压变化较小时，可调低颜色标尺上限。'; $('pressureNotice').className =
+: status.path ? '已停止并保存 · 点击下方下载本次数据' : '未记录 · 仅实时预览'; $('recordPath
+', noticeUntil = 0; let pressureRange = 3.3, activeView = 'pressure
+pressureState').textContent = label; $('pressureState').className =
+0')).join(':'); $('sessionStatus').textContent = status.recording ?
+; if (!device) state = 'service'; else if (!device.active) state =
+; $('message').className = 'error'; $('record').disabled = $('stop
+).value,note:$('note').value})); $('stop').addEventListener('click
+, series: Array.from({ length: FSR_COUNT }, (_, index) => ({ key:
+${status.rejected || 0} rejected / ${status.missing || 0} missing
+) : row.raw_config_mask === 0 ? '固件未启用原始 IMU 报告；核心 IMU 与 FSR 独立显示
+No compatible ESP32 found. Check Wi-Fi or enter its IP manually.
+unavailable', paint === null); tile.classList.toggle('over-range
+; } $('pressurePeak').textContent = sample.peak === null ? '—' :
+record').disabled = busy || status.recording || !active; $('stop
+') || '8 路 FSR 通过 USB 串口采集。点击“开始记录”才会保存；停止后可下载 ZIP。'; $('message
+.zip'; a.click(); } }); $('refreshRecordings').addEventListener(
+, color: AXIS_COLORS.mag }, ], }); const CHARTS = [ chartGroup(
+; elements.attitude.textContent = !status.angle_reference_set ?
+); elements.recordingMetric.style.color = status.record_error ?
+monitor' : 'pressure'; for (const name of ['pressure', 'monitor
+pressureRange').value = String(pressureRange); $('pressureRange
+).tabIndex = selected ? 0 : -1; } if (activeView === 'monitor
+本地服务未连接', disconnected: '未连接', waiting: '等待采样', stale: '数据已过期
+>FSR / LIVE CONTACT MAP</p><h2>8 路 FSR · 实时受压分布</h2><p class=
+ports' || path === 'discover'; const response = await fetch(
+rigidity.fsr.source'); const history = localStorage.getItem(
+模拟数据 · 非实测' : '实时数据' }; const label = sample.state === 'live
++ e.message; } } $('downloadLatest').addEventListener('click
+; elements.motionNotice.textContent = row?.motion_preview ?
+/> <title>ESP32-WROOM-32 · 8 FSR Monitor</title> <link rel=
+; elements.pipeline.textContent = status.quality_detail ||
+, scale: true, name: config.unit, nameTextStyle: { color:
+rigidity.fsr.view') === 'monitor' ? 'monitor' : 'pressure
+)); options.unshift(new Option('请选择采集板（CH340 会被自动选中）', '
+; elements.attitude.className = row?.attitude_reliable ?
+pressureDetail').textContent = sample.state !== 'live' ?
+: 'Disconnected') : stale ? 'No recent samples' : !row ?
+; const warnings = []; if (device.error) warnings.push(
+; elements.calibration.className = status.calibrated ?
+change', () => { const value = Number($('pressureRange
+: Number(value).toFixed(3) }, legend: { top: 8, type:
+)); } } try { localStorage.setItem('rigidity.fsr.view
+).addEventListener('click', () => showView(name)); $(
+Raw nine-axis + every FSR ADC conversion available' :
+>Loading ports…</option></select> </label> <label id=
+, axis.toUpperCase()]) })); RAW_GROUPS.push({ title:
+Local service unavailable: ${error.message || error}
+Found compatible ESP32 at ${result.devices[0].host}.
+Recording' : device.path ? 'Saved' : 'Not recording:
+: 'good'; const coverage = !row ? 'Waiting for data
+; else node.textContent = node.classList.contains(
+${formatNumber(row.device_elapsed_ms / 1000, 3)} s
+; elements.recordPath.textContent = status.path ||
+'; tile.style.color = paint?.foreground || ''; $(
+POST', headers:{'Content-Type':'application/json
+未连接：点旁边按钮重连'; $('folderName').disabled = $('note
+Recordings are stored in the local data folder.
+${formatNumber(row.device_dt_us / 1000, 2)} ms
+; elements.reportStatus.textContent = row ? [
+Accuracy ${accuracy} / 3 · ${age} ms${stale ?
+● Recording · ${status.recorded || 0} samples
+'), ...result.devices.map(item => new Option(
+0.0'; const label = !active ? (device.error ?
+>60 s</option> </select> </label> <div class=
+recordings'); const list = $('recordingsList
+][index]] })) }); } const FSR_CHART = { id:
+${formatNumber(status.input_rate_hz, 1)} Hz
+: row.velocity_reliable ? (row.stationary ?
+; else if (!device.latest) state = 'waiting
+采集板在线但未在写盘；请停止记录并检查文件错误后重新开始。'); $('message
+p'); const link = document.createElement('a
+Connected · ${status.source.toUpperCase()}
+Waiting for the local acquisition service.
+); if (device.record_error) warnings.push(
+>F0–F7 · 按实际贴片顺序显示</p></div> <label class=
+); value.replaceChildren(number, element(
+: !Number.isFinite(row?.theta_mag_deg) ?
+; elements.velocity.textContent = !row ?
+); if (sample.demo) notices.push('使用模拟数据
+8 FSR firmware · IMU reports not present
+${value.toFixed(seconds <= 2 ? 1 : 0)}s
+Saved · ${status.recorded || 0} samples
+: status.record_error || (status.path ?
+hidden></select> </label> <label class=
+, config.unit)); const body = element(
+>连接、读数与波形</button> </nav> <section id=
+} }, splitLine: { lineStyle: { color:
+aria-selected', String(selected)); $(
+).textContent = voltage === null ? '—
+>0.1 V · 微小变化</option> <option value=
+selected>10 s</option><option value=
+hidden>Discover</button> <button id=
+}, splitLine: { lineStyle: { color:
+/ ')} · ${sample.peak.toFixed(3)} V
+); strong.append(voltage, element(
+, fontSize: 11 } }, xAxis: { type:
+}, axisLine: { lineStyle: { color:
+ADC ${Number.isFinite(raw) ? raw :
+a'); a.href = '/api/download?name=
+width=device-width,initial-scale=1
+] = voltage; const raw = element(
+${status.retained_rows || 0} rows
+) : row.velocity_estimate_valid ?
+usb').toUpperCase()} · ${rate} Hz
+Mounting, load, motion, operator…
+, color: AXIS_COLORS.x }, { key:
+, color: AXIS_COLORS.y }, { key:
+, color: AXIS_COLORS.z }, { key:
+, label); const value = element(
+Report age unknown / unavailable
+); else if (!row) setConnection(
+; $('pressureMax').textContent =
+: 'pressure'; showView(next); $(
+disabled>断开</button> <button id=
+${group.title} · ${group.unit}
+>0.5 V</option> <option value=
+>1.0 V</option> <option value=
+>2.0 V</option> <option value=
+${config.title} live waveform
+Install pyserial (see README)
+>20 s</option> <option value=
+panel panel-surface recording
+Discovered ESP32 IP addresses
+The local service timed out.
+· ${port.kind.toUpperCase()}
+Connected · Waiting for data
+>5 s</option> <option value=
+>30 s</option><option value=
+Acceleration (with gravity)
+status?after=${state.after}
+pressureMid').textContent =
+pressure', 'monitor']) { $(
+; $('detail').textContent =
+hidden>Device IP <input id=
+>2 s</option><option value=
+panel-surface session-panel
+rigidity.supermini.history
+rigidity.fsr.pressureRange
+· 记录中，请停止后下载' : ' · 下载 ZIP
+>刷新串口</button> <button id=
+, min: -10, max: 0, name:
+11px Segoe UI, sans-serif
+, config.title), element(
+: row.attitude_reliable ?
+Local service unavailable
+选填，例如 subject-01_trial-01
+8 片 FSR 贴片分布，从左到右 F0 到 F7
+pressure-cell unavailable
+); value.append(element(
+Waiting for live samples
+Connected · Live preview
+>连接</button> <button id=
+e.g. subject-01_trial-03
+duo.js?v=20261103-single
+metric-velocity_quality
+metric-attitude_quality
+HTTP ${response.status}
+message').textContent =
+> <head> <meta charset=
+/> </head> <body class=
+chart-grid single-chart
+} }, }, yAxis: { type:
+}, axisLabel: { color:
+${group.report}_age_ms
+${group.report}_status
+rgb(${rgb.join(', ')})
+live' ? device.latest[
+BNO080 sensor readings
+pressure-side-headings
+, textStyle: { color:
+, axisLabel: { color:
+' : 'device/'}${path}
+No serial ports found
+demo' ? 'Demo data' :
+toolbar panel-surface
+Angular Displacement
+Angular Acceleration
+metric-retained_rows
+metric-report_status
+; return new Option(
+local data directory
+Experiment recording
+muted recording-copy
+Record the FSR board
+pressure-orientation
+8 片 FSR，从左到右 F0 到 F7
+Linear Acceleration
+raw_${group.report}
+metric-frame_health
+raw_fsr${index}_adc
+status-pill${kind ?
+rigidity.fsr.source
+Demo · Live preview
+模拟电压' : 'USB 实测电压'}
+/api/download?name=
+Connection controls
+panel panel-surface
+muted motion-notice
+>颜色标尺上限 <select id=
+pressure-connection
+pressure-wrist-rest
+pressure-arm-labels
+USB 串口（921600 baud）
+Wi-Fi / TCP（本固件不支持）
+metric-device_time
+metric-calibration
+Waiting for report
+force-metric-label
+Bias zero complete
+; node.className =
+pressure${channel}
+control-group grow
+>波形时间窗 <select id=
+Acquisition status
+Kinematic readings
+pressure-summaries
+].map((axis) => [
+metric-input_rate
+force-metric-unit
+, status.error ||
+> <div> <p class=
+refreshRecordings
+pressure-gradient
+pressure-footnote
+Angular Velocity
+alpha_mag_deg_s2
+metric-sample_dt
+metric-recording
+kinematicMetrics
+mechanicalCharts
+force-value-unit
+)); metricNodes[
+application/json
+, status.error ?
+visibilitychange
+，超过颜色标尺上限' : ''}
+> <header class=
+> <option value=
+Kinematic charts
+session-controls
+aria-labelledby=
+> <div><p class=
+keyboard-outline
+pressure-channel
+8 路 FSR：连接、读数和波形
+Rotation Radius
+Linear Velocity
+omega_mag_deg_s
+· Sensor Report
+metric-pipeline
+kinematicCharts
+, nameLocation:
+chart-card-head
+quality-warning
+); tile.title =
+board-dot black
+pressure-legend
+pressure-notice
+alpha_x_deg_s2
+), chartGroup(
+a_kin_mag_m_s2
+alpha_y_deg_s2
+alpha_z_deg_s2
+historySeconds
+connectionText
+report-quality
+${name}_status
+warning' : ''}
+/> <meta name=
+> <main class=
+/> <select id=
+record-actions
+downloadLatest
+recordingsList
+pressure-scene
+pressure-scale
+pressure-ticks
+pressureDetail
+pressureNotice
+Loading ports…
+omega_x_deg_s
+theta_mag_deg
+omega_y_deg_s
+omega_z_deg_s
+${group.unit}
+Serial device
+Not recording
+: recording ?
+control-group
+> <button id=
+metric-groups
+record-fields
+sessionStatus
+佩戴位置、动作、实验条件…
+pressureState
+pressure-pads
+pressure-unit
+pressure-near
+device-banner
+device-detail
+192.168.1.100
+Acceleration
+radius_mag_m
+recordStatus
+forceMetrics
+motionNotice
+metric-group
+force-metric
+FSR ${index}
+Content-Type
+quality-good
+record/start
+Disconnected
+aria-label',
+/api/${path}
+placeholder=
+FSR readings
+pressureView
+pressurePeak
+0.1 V · 微小变化
+, items: [[
+ax_kin_m_s2
+${prefix}_x
+ay_kin_m_s2
+az_kin_m_s2
+theta_x_deg
+theta_y_deg
+theta_z_deg
+statusLabel
+metric-unit
+F${index}_V
+Demo · Live
+record/stop
+${name}View
+F${channel}
+Home', 'End
+sessionTime
+status-pill
+spellcheck=
+aria-label=
+status-grid
+record-time
+quickStatus
+pressureTab
+monitorView
+pressureMid
+pressureMax
+device-pane
+device.html
+模拟演示（非真实数据）
+3.3 V · 全量程
+use strict
+, items: [
+radius_x_m
+radius_y_m
+radius_z_m
+wifiFields
+disconnect
+folderName
+statusPill
+recordTime
+recordPath
+rawMetrics
+metric-row
+chart-card
+aria-label
+AbortError
+[data-imu]
+${name}Tab
+error' : '
+status-dot
+panel-head
+force-grid
+chart-grid
+stylesheet
+styles.css
+duo-header
+monitorTab
+Gyroscope
+, report:
+v_mag_m_s
+usbFields
+180px 0px
+warning'}
+secondary
+FSR chart
+duo-shell
+reconnect
+view-tabs
+pressure0
+pressure1
+pressure2
+pressure3
+pressure4
+pressure5
+pressure6
+pressure7
+velocity
+, title:
+discover
+no-store
+)).join(
+function
+); if ([
+无实时读数' :
+content=
+./app.js
+viewport
+voltage0
+voltage1
+voltage2
+voltage3
+voltage4
+voltage5
+voltage6
+voltage7
+duo-grid
+tabpanel
+#0f8b8d
+#e4572e
+#2e5aac
+#f3a712
+#5e60ce
+#118ab2
+#06a77d
+#e09f3e
+#d1495b
+#7b2cbf
+#3a86ff
+#ef476f
+, unit:
+, name:
+refresh
+connect
+message
+article
+#667385
+#edf1f5
+#778497
+#f1f4f7
+#8a96a6
+· CH340
+unknown
+).join(
+waiting
+eyebrow
+duo.css
+tablist
+F0 等待数据
+F1 等待数据
+F2 等待数据
+F3 等待数据
+F4 等待数据
+F5 等待数据
+F6 等待数据
+F7 等待数据
+summary
+vx_m_s
+linear
+radius
+vy_m_s
+vz_m_s
+source
+record
+strong
+ADC --
+center
+active
+theta_
+change
+resize
+status
+polite
+class=
+value=
+button
+detail
+颜色标尺上限
+accel
+rad/s
+rad_s
+a_kin
+angle
+theta
+omega
+alpha
+right
+chart
+error
+ports
+-- ms
+click
+stale
+href=
+muted
+type=
+zh-CN
+utf-8
+false
+role=
+0.5 V
+1.0 V
+2.0 V
+], [
+m/s²
+°/s²
+m_s2
+gyro
+port
+host
+stop
+zero
+note
+span
+axis
+line
+lttb
+#fff
+role
+POST
+wifi
+-- s
+quat
+live
+demo
+.zip
+wide
+1000
+path
+采集视图
+true
+10 s
+20 s
+30 s
+60 s
+|r|
+m/s
+|v|
+|a|
+|θ|
+°/s
+|ω|
+|α|
+div
+img
+usb
+) ?
+) :
+mag
+100
+tab
+0.1
+0.5
+3.3
+2 s
+5 s

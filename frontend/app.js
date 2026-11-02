@@ -1,7 +1,49 @@
 (() => {
   "use strict";
 
+  const LANGUAGES = ["en", "zh-CN", "zh-TW"];
+  let translations = {};
+  let currentLanguage = "en";
   const $ = (id) => document.getElementById(id);
+
+  function t(key, fallback, vars) {
+    let value = Object.prototype.hasOwnProperty.call(translations, key) ? translations[key] : fallback ?? key;
+    if (vars) for (const [name, replacement] of Object.entries(vars)) value = value.replaceAll(`{${name}}`, String(replacement));
+    return value;
+  }
+
+  function applyTranslations() {
+    document.documentElement.lang = currentLanguage;
+    document.querySelectorAll("[data-i18n]").forEach((node) => {
+      const value = translations[node.dataset.i18n];
+      if (typeof value === "string") node.textContent = value + (node.dataset.i18nSuffix || "");
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+      const value = translations[node.dataset.i18nPlaceholder];
+      if (typeof value === "string") node.placeholder = value;
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach((node) => {
+      const value = translations[node.dataset.i18nTitle];
+      if (typeof value === "string") node.title = value;
+    });
+    document.title = t("device_page_title", "ESP32-WROOM-32 · 8 FSR Monitor");
+  }
+
+  async function loadLanguage(lang) {
+    if (!LANGUAGES.includes(lang)) lang = "en";
+    try {
+      const response = await fetch(`public/loc/${lang}.json`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      translations = await response.json();
+      currentLanguage = lang;
+      applyTranslations();
+      Object.values(state.charts).forEach((chart) => chart.resize?.());
+      if (state.status) updateStatusUi(state.status);
+    } catch (error) {
+      console.error(`Unable to load language "${lang}":`, error);
+    }
+  }
+
   const FSR_COUNT = 8;
   const MAX_BROWSER_ROWS = 7200;
   const MAX_PLOT_POINTS = 650;
@@ -10,22 +52,22 @@
   const FSR_COLORS = ["#5e60ce", "#118ab2", "#06a77d", "#e09f3e", "#d1495b", "#7b2cbf", "#3a86ff", "#ef476f"];
 
   const METRIC_GROUPS = [
-    { title: "Rotation Radius", unit: "m", items: [["radius_x_m", "rₓ"], ["radius_y_m", "rᵧ"], ["radius_z_m", "r𝓏"], ["radius_mag_m", "|r|"]] },
-    { title: "Linear Velocity", unit: "m/s", items: [["vx_m_s", "vₓ"], ["vy_m_s", "vᵧ"], ["vz_m_s", "v𝓏"], ["v_mag_m_s", "|v|"]] },
-    { title: "Acceleration", unit: "m/s²", items: [["ax_kin_m_s2", "aₓ"], ["ay_kin_m_s2", "aᵧ"], ["az_kin_m_s2", "a𝓏"], ["a_kin_mag_m_s2", "|a|"]] },
-    { title: "Angular Displacement", unit: "°", items: [["theta_x_deg", "θₓ"], ["theta_y_deg", "θᵧ"], ["theta_z_deg", "θ𝓏"], ["theta_mag_deg", "|θ|"]] },
-    { title: "Angular Velocity", unit: "°/s", items: [["omega_x_deg_s", "ωₓ"], ["omega_y_deg_s", "ωᵧ"], ["omega_z_deg_s", "ω𝓏"], ["omega_mag_deg_s", "|ω|"]] },
-    { title: "Angular Acceleration", unit: "°/s²", items: [["alpha_x_deg_s2", "αₓ"], ["alpha_y_deg_s2", "αᵧ"], ["alpha_z_deg_s2", "α𝓏"], ["alpha_mag_deg_s2", "|α|"]] },
+    { title: "Rotation Radius", titleKey: "chart_radius", unit: "m", items: [["radius_x_m", "rₓ"], ["radius_y_m", "rᵧ"], ["radius_z_m", "r𝓏"], ["radius_mag_m", "|r|"]] },
+    { title: "Linear Velocity", titleKey: "chart_velocity", unit: "m/s", items: [["vx_m_s", "vₓ"], ["vy_m_s", "vᵧ"], ["vz_m_s", "v𝓏"], ["v_mag_m_s", "|v|"]] },
+    { title: "Acceleration", titleKey: "chart_acceleration", unit: "m/s²", items: [["ax_kin_m_s2", "aₓ"], ["ay_kin_m_s2", "aᵧ"], ["az_kin_m_s2", "a𝓏"], ["a_kin_mag_m_s2", "|a|"]] },
+    { title: "Angular Displacement", titleKey: "chart_angle", unit: "°", items: [["theta_x_deg", "θₓ"], ["theta_y_deg", "θᵧ"], ["theta_z_deg", "θ𝓏"], ["theta_mag_deg", "|θ|"]] },
+    { title: "Angular Velocity", titleKey: "chart_omega", unit: "°/s", items: [["omega_x_deg_s", "ωₓ"], ["omega_y_deg_s", "ωᵧ"], ["omega_z_deg_s", "ω𝓏"], ["omega_mag_deg_s", "|ω|"]] },
+    { title: "Angular Acceleration", titleKey: "chart_alpha", unit: "°/s²", items: [["alpha_x_deg_s2", "αₓ"], ["alpha_y_deg_s2", "αᵧ"], ["alpha_z_deg_s2", "α𝓏"], ["alpha_mag_deg_s2", "|α|"]] },
   ];
   const RAW_GROUPS = [
-    { title: "Acceleration (with gravity)", unit: "m/s²", report: "accel", prefix: "accel", suffix: "m_s2" },
-    { title: "Gyroscope", unit: "rad/s", report: "gyro", prefix: "gyro", suffix: "rad_s" },
-    { title: "Linear Acceleration", unit: "m/s²", report: "linear", prefix: "linear", suffix: "m_s2" },
+    { title: "Acceleration (with gravity)", titleKey: "raw_accel", unit: "m/s²", report: "accel", prefix: "accel", suffix: "m_s2" },
+    { title: "Gyroscope", titleKey: "raw_gyro", unit: "rad/s", report: "gyro", prefix: "gyro", suffix: "rad_s" },
+    { title: "Linear Acceleration", titleKey: "raw_linear", unit: "m/s²", report: "linear", prefix: "linear", suffix: "m_s2" },
   ].map((group) => ({ ...group, items: ["x", "y", "z"].map((axis) => [`${group.prefix}_${axis}_${group.suffix}`, axis.toUpperCase()]) }));
-  RAW_GROUPS.push({ title: "Quaternion", unit: "", report: "quat", items: ["w", "x", "y", "z"].map((axis) => [`quat_${axis}`, axis.toUpperCase()]) });
+  RAW_GROUPS.push({ title: "Quaternion", titleKey: "raw_quat", unit: "", report: "quat", items: ["w", "x", "y", "z"].map((axis) => [`quat_${axis}`, axis.toUpperCase()]) });
 
   const chartGroup = (id, title, unit, prefix) => ({
-    id, title, unit,
+    id, title, titleKey: `chart_${id}`, unit,
     series: [
       { key: `${prefix}_x`, name: "X", color: AXIS_COLORS.x },
       { key: `${prefix}_y`, name: "Y", color: AXIS_COLORS.y },
@@ -53,7 +95,7 @@
       series: group.items.map(([key, name], index) => ({ key, name, color: AXIS_COLORS[["x", "y", "z"][index]] })) });
   }
   const FSR_CHART = {
-    id: "fsr", title: "FSR Voltage", unit: "V",
+    id: "fsr", title: "FSR Voltage", titleKey: "fsr_voltage_chart", unit: "V",
     series: Array.from({ length: FSR_COUNT }, (_, index) => ({ key: `F${index}_V`, name: `F${index}`, color: FSR_COLORS[index] })),
   };
   const ALL_CHARTS = [...CHARTS, FSR_CHART];
@@ -89,7 +131,12 @@
   function createMetrics() {
     const createGroup = (group) => {
       const card = element("article", "metric-group");
-      card.append(element("h3", "", `${group.title} · ${group.unit}`));
+      const heading = element("h3", "", `${t(group.titleKey, group.title)} · ${group.unit}`);
+      if (group.titleKey) {
+        heading.dataset.i18n = group.titleKey;
+        heading.dataset.i18nSuffix = ` · ${group.unit}`;
+      }
+      card.append(heading);
       for (const [key, label] of group.items) {
         const row = element("div", "metric-row");
         const name = element("span", "", label);
@@ -102,7 +149,7 @@
         card.append(row);
       }
       if (group.report) {
-        const quality = element("p", "report-quality", "Waiting for report");
+        const quality = element("p", "report-quality", t("waiting_for_report", "Waiting for report"));
         reportNodes[group.report] = quality;
         card.append(quality);
       }
@@ -240,7 +287,7 @@
       if (!finite.length) {
         context.fillStyle = "#8a96a6";
         context.textAlign = "center";
-        context.fillText("Waiting for live samples", (left + right) / 2, (top + bottom) / 2);
+        context.fillText(t("waiting_for_live_samples", "Waiting for live samples"), (left + right) / 2, (top + bottom) / 2);
       }
     }
 
@@ -260,10 +307,12 @@
     const card = element("article", "chart-card");
     card.dataset.chartId = config.id;
     const head = element("div", "chart-card-head");
-    head.append(element("strong", "", config.title), element("span", "", config.unit));
+    const title = element("strong", "", config.titleKey ? t(config.titleKey, config.title) : config.title);
+    if (config.titleKey) title.dataset.i18n = config.titleKey;
+    head.append(title, element("span", "", config.unit));
     const body = element("canvas", "chart");
     body.setAttribute("role", "img");
-    body.setAttribute("aria-label", `${config.title} live waveform`);
+    body.setAttribute("aria-label", `${title.textContent} live waveform`);
     card.append(head, body);
     state.chartCards[config.id] = card;
     state.visibleCharts[config.id] = true;
@@ -316,7 +365,7 @@
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       return result;
     } catch (error) {
-      if (error.name === "AbortError") throw new Error("The local service timed out.");
+      if (error.name === "AbortError") throw new Error(t("service_timeout", "The local service timed out."));
       throw error;
     } finally {
       window.clearTimeout(timeout);
@@ -371,12 +420,12 @@
     const selected = elements.port.value;
     const result = await api("ports");
     const options = result.ports.map((port) => {
-      const name = port.description || port.manufacturer || "Serial device";
+      const name = port.description || port.manufacturer || t("serial_device", "Serial device");
       const chip = port.ch340 ? " · CH340" : port.kind && port.kind !== "unknown" ? ` · ${port.kind.toUpperCase()}` : "";
       return new Option(`${name}${chip} · ${port.device}`, port.device);
     });
-    if (!options.length) options.push(new Option(result.available ? "No serial ports found" : "Install pyserial (see README)", ""));
-    options.unshift(new Option('请选择采集板（CH340 会被自动选中）', ''));
+    if (!options.length) options.push(new Option(result.available ? t("no_serial_ports", "No serial ports found") : t("install_pyserial", "Install pyserial (see README)"), ""));
+    options.unshift(new Option(t("select_board", "Select FSR Board"), ""));
     elements.port.replaceChildren(...options);
     const recommended = result.ports.find((port) => port.recommended);
     if (recommended) elements.port.value = recommended.device;
@@ -386,7 +435,7 @@
   function resetLiveState() {
     state.history = [];
     state.after = 0;
-    for (const node of Object.values(reportNodes)) node.textContent = "Waiting for report";
+    for (const node of Object.values(reportNodes)) node.textContent = t("waiting_for_report", "Waiting for report");
     for (const node of Object.values(metricNodes)) {
       if (node.nodeType === Node.TEXT_NODE) node.nodeValue = "--";
       else node.textContent = node.classList.contains("force-metric-unit") ? "ADC --" : "--";
@@ -428,20 +477,24 @@
     elements.inputRate.textContent = `${formatNumber(status.input_rate_hz, 1)} Hz`;
     elements.sampleDt.textContent = row && row.device_dt_us ? `${formatNumber(row.device_dt_us / 1000, 2)} ms` : "-- ms";
     elements.deviceTime.textContent = row ? `${formatNumber(row.device_elapsed_ms / 1000, 3)} s` : "-- s";
-    elements.retainedRows.textContent = `${status.retained_rows || 0} rows`;
-    elements.frameHealth.textContent = `${status.rejected || 0} rejected / ${status.missing || 0} missing`;
-    elements.calibration.textContent = status.calibrated ? "Bias zero complete" : `Hold still · ${status.calibration_count || 0} / ${status.calibration_target || 200}`;
+    elements.retainedRows.textContent = `${status.retained_rows || 0} ${t("rows", "rows")}`;
+    elements.frameHealth.textContent = t("rejected_missing", "{rejected} rejected / {missing} missing", {
+      rejected: status.rejected || 0, missing: status.missing || 0,
+    });
+    elements.calibration.textContent = status.calibrated ? t("bias_zero_complete", "Bias zero complete") : t("calibration_hold", "Hold still · {count} / {target}", {
+      count: status.calibration_count || 0, target: status.calibration_target || 200,
+    });
     elements.calibration.className = status.calibrated ? "quality-good" : "quality-warning";
     elements.reportStatus.textContent = row ? ["accel", "gyro", "linear", "quat"].map((name) => row[`${name}_status`] ?? "--").join(" / ") : "--";
-    elements.attitude.textContent = !status.angle_reference_set ? "Waiting for quaternion" : !Number.isFinite(row?.theta_mag_deg)
-      ? "Quaternion unavailable" : row.attitude_reliable ? "Relative angle · quality OK" : "Relative angle · quality unverified";
+    elements.attitude.textContent = !status.angle_reference_set ? t("waiting_for_quaternion", "Waiting for quaternion") : !Number.isFinite(row?.theta_mag_deg)
+      ? t("quaternion_unavailable", "Quaternion unavailable") : row.attitude_reliable ? t("attitude_ok", "Relative angle · quality OK") : t("attitude_unverified", "Relative angle · quality unverified");
     elements.attitude.className = row?.attitude_reliable ? "quality-good" : "quality-warning";
     elements.motionNotice.textContent = row?.motion_preview
-      ? "Live estimates remain visible even before calibration or with unreliable quality. Velocity can drift; gaps start a new zero-velocity segment. Angle zero does not reset velocity."
-      : "Relative angle uses the first quaternion or manual zero. Velocity uses a separate fixed reference. Quality and numeric estimates are shown independently.";
+      ? t("motion_live_note", "Live estimates remain visible even before calibration or with unreliable quality. Velocity can drift; gaps start a new zero-velocity segment. Angle zero does not reset velocity.")
+      : t("motion_idle_note", "Relative angle uses the first quaternion or manual zero. Velocity uses a separate fixed reference. Quality and numeric estimates are shown independently.");
     elements.pipeline.textContent = status.quality_detail || "--";
     elements.velocity.textContent = !row ? "--" : row.velocity_reliable
-      ? (row.stationary ? "Zeroed" : "Short-term estimate") : row.velocity_estimate_valid ? "Unreliable · estimate displayed" : "Missing data · integration paused";
+      ? (row.stationary ? t("velocity_zeroed", "Zeroed") : t("velocity_short_term", "Short-term estimate")) : row.velocity_estimate_valid ? t("velocity_unreliable", "Unreliable · estimate displayed") : t("velocity_missing", "Missing data · integration paused");
 
     if (row) {
       for (const group of [...METRIC_GROUPS, ...RAW_GROUPS]) {
@@ -455,7 +508,9 @@
           const missing = !Number.isFinite(age) || age === 65535;
           const stale = missing || age > (group.report.endsWith("mag") ? 100 : 30);
           const node = reportNodes[group.report];
-          node.textContent = missing ? "Report age unknown / unavailable" : `Accuracy ${accuracy} / 3 · ${age} ms${stale ? " · stale" : ""}`;
+          node.textContent = missing ? t("report_unknown", "Report age unknown / unavailable") : t("report_accuracy", "Accuracy {accuracy} / 3 · {age} ms{stale}", {
+            accuracy, age, stale: stale ? ` · ${t("stale", "stale")}` : "",
+          });
           node.className = `report-quality ${stale || accuracy < 2 ? "quality-warning" : "quality-good"}`;
         }
       }
@@ -470,13 +525,13 @@
     elements.recordTime.textContent = duration(status.recording_elapsed_ms);
     elements.recordStatus.classList.toggle("active", recording);
     elements.recordStatus.textContent = recording
-      ? `● Recording · ${status.recorded || 0} samples`
-      : status.path ? `Saved · ${status.recorded || 0} samples` : "Not recording";
+      ? t("recording_active", "● Recording · {count} samples", { count: status.recorded || 0 })
+      : status.path ? t("saved_status", "Saved · {count} samples", { count: status.recorded || 0 }) : t("not_recording_status", "Not recording");
     elements.recordingMetric.textContent = recording
-      ? `Recording · ${status.recorded || 0} rows · ${duration(status.recording_elapsed_ms)}`
-      : status.record_error || (status.path ? `Saved · ${status.recorded || 0} rows` : "Not recording");
+      ? t("recording_metric", "Recording · {count} rows · {time}", { count: status.recorded || 0, time: duration(status.recording_elapsed_ms) })
+      : status.record_error || (status.path ? t("saved_metric", "Saved · {count} rows", { count: status.recorded || 0 }) : t("not_recording_status", "Not recording"));
     elements.recordingMetric.style.color = status.record_error ? "#c23b3b" : recording ? "#087f5b" : "";
-    elements.recordPath.textContent = status.path || `Save location: ${status.data_dir || "local data directory"}`;
+    elements.recordPath.textContent = status.path || t("save_location", "Save location: {path}", { path: status.data_dir || t("local_data_directory", "local data directory") });
   }
 
   function updateSensorPanels(status) {
@@ -490,13 +545,13 @@
 
   function updateStatusUi(status) {
     const row = status.latest;
-    if (!status.active) setConnection(status.error ? "error" : "", status.error ? "Connection error" : "Disconnected", status.error || "Acquisition stopped");
-    else if (!row) setConnection("waiting", "Connected · Waiting for data", status.quality_detail);
+    if (!status.active) setConnection(status.error ? "error" : "", status.error ? t("status_connection_error", "Connection error") : t("status_disconnected", "Disconnected"), status.error || t("status_acquisition_stopped", "Acquisition stopped"));
+    else if (!row) setConnection("waiting", t("status_connected_waiting", "Connected · Waiting for data"), status.quality_detail);
     // This firmware streams eight FSR voltages without an IMU. Treat a finite
     // F0 voltage as live data instead of waiting for BNO080 calibration.
-    else if (Number.isFinite(row.F0_V)) setConnection("live", status.source === "demo" ? "Demo · Live" : `Connected · ${status.source.toUpperCase()}`, status.quality_detail);
-    else if (!status.calibrated || !row.attitude_reliable) setConnection("waiting", status.source === "demo" ? "Demo · Live preview" : "Connected · Live preview", status.quality_detail);
-    else setConnection("live", status.source === "demo" ? "Demo · Live" : `Connected · ${status.source.toUpperCase()}`, status.quality_detail);
+    else if (Number.isFinite(row.F0_V)) setConnection("live", status.source === "demo" ? t("status_demo_live", "Demo · Live") : t("status_connected_source", "Connected · {source}", { source: status.source.toUpperCase() }), status.quality_detail);
+    else if (!status.calibrated || !row.attitude_reliable) setConnection("waiting", status.source === "demo" ? t("status_demo_preview", "Demo · Live preview") : t("status_connected_preview", "Connected · Live preview"), status.quality_detail);
+    else setConnection("live", status.source === "demo" ? t("status_demo_live", "Demo · Live") : t("status_connected_source", "Connected · {source}", { source: status.source.toUpperCase() }), status.quality_detail);
     if (status.active && elements.source.value !== status.source) {
       elements.source.value = status.source;
       sourceChanged();
@@ -504,10 +559,10 @@
     if (state.notice && Date.now() < state.noticeUntil) message(state.notice, true);
     else if (status.record_error) message(status.record_error, true);
     else if (status.error) message(status.error, true);
-    else if (status.cursor_dropped) message("The live display skipped older buffered rows; recording on disk is unaffected.");
+    else if (status.cursor_dropped) message(t("message_cursor_dropped", "The live display skipped older buffered rows; recording on disk is unaffected."));
     else message(status.active
-      ? "Live acquisition is running. Use the Record button on the pressure-map page to save."
-      : "Connect starts live acquisition only. Use the Record button on the pressure-map page to save.");
+      ? t("device_message_live", "Live acquisition is running. Use the Record button on the pressure-map page to save.")
+      : t("device_message_default", "Connect starts live acquisition only. Use the Record button on the pressure-map page to save and export data."));
     updateMetrics(status);
     updateSensorPanels(status);
     updateButtons();
@@ -533,8 +588,8 @@
       updateStatusUi(status);
     } catch (error) {
       state.status = null;
-      setConnection("error", "Local service unavailable", error.message || String(error));
-      message(`Local service unavailable: ${error.message || error}`, true);
+      setConnection("error", t("status_service_unavailable", "Local service unavailable"), error.message || String(error));
+      message(t("message_service_unavailable", "Local service unavailable: {error}", { error: error.message || error }), true);
       updateButtons();
     } finally {
       state.polling = false;
@@ -625,13 +680,13 @@
       const result = await api("discover", undefined, 7000);
       if (result.devices.length === 1) {
         elements.host.value = result.devices[0].host;
-        message(`Found compatible ESP32 at ${result.devices[0].host}.`);
+        message(t("discover_found", "Found compatible ESP32 at {host}.", { host: result.devices[0].host }));
       } else if (result.devices.length > 1) {
         const select = $('discovered');
-        select.replaceChildren(new Option('Select this ESP32 IP…', ''), ...result.devices.map(item => new Option(`${item.host} · ${item.firmware}`, item.host)));
+        select.replaceChildren(new Option(t("discover_select", "Select this ESP32 IP…"), ''), ...result.devices.map(item => new Option(`${item.host} · ${item.firmware}`, item.host)));
         select.hidden = false;
         select.onchange = () => { if (select.value) elements.host.value = select.value; };
-      } else throw new Error("No compatible ESP32 found. Check Wi-Fi or enter its IP manually.");
+      } else throw new Error(t("discover_none", "No compatible ESP32 found. Check Wi-Fi or enter its IP manually."));
     }));
     elements.connect.addEventListener("click", () => action(async () => {
       resetLiveState();
@@ -662,12 +717,18 @@
     loadPreferences();
     setupEvents();
     sourceChanged();
-    setConnection("", "Disconnected", "Waiting for the local acquisition service.");
+    setConnection("", t("status_disconnected", "Disconnected"), t("connection_waiting_service", "Waiting for the local acquisition service."));
     loadPorts().catch((error) => message(error.message, true));
     const tick = async () => {
       await poll();
       window.setTimeout(tick, 100);
-    };
+    }
+    window.addEventListener("message", (event) => {
+      if (event.origin !== location.origin) return;
+      if (event.data?.type !== "fsr-language") return;
+      void loadLanguage(event.data.lang);
+    });
+    void loadLanguage("en");
     void tick();
   }
 

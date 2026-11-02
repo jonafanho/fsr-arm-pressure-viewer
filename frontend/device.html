@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ESP32-WROOM-32 · 8 FSR Monitor</title>
+    <title data-i18n="device_page_title">ESP32-WROOM-32 · 8 FSR Monitor</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body class="device-monitor">
@@ -11,29 +11,30 @@
       <header class="topbar panel-surface">
         <div>
           <p class="eyebrow">ESP32-WROOM-32 / NODEMCU-32 / 8 FSR</p>
-          <h1>8 路 FSR 采集板</h1>
-          <p id="connectionText" class="muted">Waiting for the local acquisition service.</p>
+          <h1 data-i18n="device_heading">8-Channel FSR Board</h1>
+          <p id="connectionText" class="muted" data-i18n="connection_waiting_service">Waiting for the local acquisition service.</p>
         </div>
         <div id="statusPill" class="status-pill" aria-live="polite">
-          <span class="status-dot"></span><span id="statusLabel">Disconnected</span>
+          <span class="status-dot"></span><span id="statusLabel" data-i18n="status_disconnected">Disconnected</span>
         </div>
       </header>
 
       <section class="toolbar panel-surface" aria-label="Connection controls">
-        <label class="control-group">数据来源
+        <label class="control-group"><span data-i18n="select_source">Data Source</span>
           <select id="source">
-            <option value="usb">USB 串口（921600 baud）</option>
-            <option value="wifi" disabled>Wi-Fi / TCP（本固件不支持）</option>
-            <option value="demo">模拟演示（非真实数据）</option>
+            <option value="usb" data-i18n="usb_source">USB Serial (921600 baud)</option>
+            <option value="wifi" disabled data-i18n="wifi_source">Wi-Fi / TCP (Not Supported by This Firmware)</option>
+            <option value="demo" data-i18n="demo_source">Demo Mode (Simulated Data)</option>
           </select>
         </label>
-        <label id="usbFields" class="control-group grow">串口设备
-          <select id="port"><option value="">Loading ports…</option></select>
-        </label>        <label id="wifiFields" class="control-group grow" hidden>Device IP
+        <label id="usbFields" class="control-group grow"><span data-i18n="select_port">Serial Device</span>
+          <select id="port"><option value="" data-i18n="loading_ports">Loading ports…</option></select>
+        </label>
+        <label id="wifiFields" class="control-group grow" hidden><span data-i18n="ip_address">Device IP</span>
           <input id="host" value="" placeholder="192.168.1.100" spellcheck="false" />
           <select id="discovered" aria-label="Discovered ESP32 IP addresses" hidden></select>
         </label>
-        <label class="control-group">波形时间窗
+        <label class="control-group"><span data-i18n="history_window">Waveform Window</span>
           <select id="historySeconds">
             <option value="2">2 s</option><option value="5">5 s</option>
             <option value="10" selected>10 s</option><option value="20">20 s</option>
@@ -41,83 +42,83 @@
           </select>
         </label>
         <div class="toolbar-actions">
-          <button id="refresh" class="secondary" type="button">刷新串口</button>
-          <button id="discover" class="secondary" type="button" hidden>Discover</button>
-          <button id="connect" type="button">连接</button>
-          <button id="disconnect" class="secondary" type="button" disabled>断开</button>
-          <button id="zero" class="secondary" type="button" disabled hidden data-imu>当前姿态归零</button>
+          <button id="refresh" class="secondary" type="button" data-i18n="refresh_ports">Refresh Serial Ports</button>
+          <button id="discover" class="secondary" type="button" hidden data-i18n="discover_devices">Discover</button>
+          <button id="connect" type="button" data-i18n="connect_button">Connect</button>
+          <button id="disconnect" class="secondary" type="button" disabled data-i18n="disconnect_button">Disconnect</button>
+          <button id="zero" class="secondary" type="button" disabled hidden data-imu data-i18n="zero_button">Zero Attitude</button>
         </div>
       </section>
 
-      <p id="message" class="message" role="status" aria-live="polite">Connect starts live acquisition only. Use the Record button on the pressure-map page to save and export data.</p>
+      <p id="message" class="message" role="status" aria-live="polite" data-i18n="device_message_default">Connect starts live acquisition only. Use the Record button on the pressure-map page to save and export data.</p>
 
       <section class="status-grid" aria-label="Acquisition status">
-        <article><span>采样速率</span><strong id="metric-input_rate">-- Hz</strong></article>
-        <article><span>采样间隔</span><strong id="metric-sample_dt">-- ms</strong></article>
-        <article><span>设备时间</span><strong id="metric-device_time">-- s</strong></article>
-        <article><span>实时缓存</span><strong id="metric-retained_rows">0 rows</strong></article>
-        <article><span>数据质量</span><strong id="metric-frame_health">0 rejected / 0 missing</strong></article>
-        <article hidden data-imu><span>零偏校准（保持静止）</span><strong id="metric-calibration">Hold still · 0 / 200</strong></article>
-        <article hidden data-imu><span>速度估计质量</span><strong id="metric-velocity_quality">--</strong></article>
-        <article class="wide" hidden data-imu><span>BNO Accuracy · Accel / Gyro / Linear / Quat</span><strong id="metric-report_status">--</strong></article>
-        <article class="wide" hidden data-imu><span>Relative Attitude</span><strong id="metric-attitude_quality">Waiting for quaternion</strong></article>
-        <article class="wide"><span>Pipeline</span><strong id="metric-pipeline">Acquisition stopped</strong></article>
-        <article class="wide"><span>Recording</span><strong id="metric-recording">Not recording</strong></article>
+        <article><span data-i18n="metric_input_rate">Sample Rate</span><strong id="metric-input_rate">-- Hz</strong></article>
+        <article><span data-i18n="metric_sample_dt">Sample Interval</span><strong id="metric-sample_dt">-- ms</strong></article>
+        <article><span data-i18n="metric_device_time">Device Time</span><strong id="metric-device_time">-- s</strong></article>
+        <article><span data-i18n="metric_retained_rows">Live Buffer</span><strong id="metric-retained_rows">0 rows</strong></article>
+        <article><span data-i18n="metric_frame_health">Data Quality</span><strong id="metric-frame_health">0 rejected / 0 missing</strong></article>
+        <article hidden data-imu><span data-i18n="metric_calibration">Bias Calibration (Hold Still)</span><strong id="metric-calibration">Hold still · 0 / 200</strong></article>
+        <article hidden data-imu><span data-i18n="metric_velocity_quality">Velocity Quality</span><strong id="metric-velocity_quality">--</strong></article>
+        <article class="wide" hidden data-imu><span data-i18n="metric_report_status">BNO Accuracy · Accel / Gyro / Linear / Quat</span><strong id="metric-report_status">--</strong></article>
+        <article class="wide" hidden data-imu><span data-i18n="metric_attitude">Relative Attitude</span><strong id="metric-attitude_quality">Waiting for quaternion</strong></article>
+        <article class="wide"><span data-i18n="metric_pipeline">Pipeline</span><strong id="metric-pipeline" data-i18n="status_acquisition_stopped">Acquisition stopped</strong></article>
+        <article class="wide"><span data-i18n="metric_recording">Recording</span><strong id="metric-recording">Not recording</strong></article>
       </section>
 
       <section class="panel panel-surface" aria-label="BNO080 sensor readings" hidden data-imu>
-        <div class="panel-head"><div><p class="eyebrow">SENSOR REPORTS</p><h2>BNO080 传感器读数</h2></div><span>Accuracy: 0 unreliable · 1 low · 2 medium · 3 high</span></div>
-        <p class="muted">Available reports remain visible before calibration. Check report age and accuracy before using them.</p>
+        <div class="panel-head"><div><p class="eyebrow" data-i18n="eyebrow_sensor_reports">SENSOR REPORTS</p><h2 data-i18n="imu_sensor_reports">BNO080 Sensor Readings</h2></div><span data-i18n="imu_report_legend">Accuracy: 0 unreliable · 1 low · 2 medium · 3 high</span></div>
+        <p class="muted" data-i18n="imu_sensor_note">Available reports remain visible before calibration. Check report age and accuracy before using them.</p>
         <div id="rawMetrics" class="metric-groups"></div>
       </section>
 
       <section class="panel panel-surface" aria-label="Kinematic readings" hidden data-imu>
-        <div class="panel-head"><div><p class="eyebrow">CURRENT SAMPLE</p><h2>运动学估计值</h2></div><span>XYZ components and magnitude</span></div>
+        <div class="panel-head"><div><p class="eyebrow" data-i18n="eyebrow_current_sample">CURRENT SAMPLE</p><h2 data-i18n="imu_kinematic_estimates">Kinematic Estimates</h2></div><span data-i18n="imu_axes_note">XYZ components and magnitude</span></div>
         <div id="kinematicMetrics" class="metric-groups"></div>
         <p id="motionNotice" class="muted motion-notice">Numeric estimates remain visible with quality warnings. Missing data pauses velocity integration.</p>
       </section>
 
       <section class="panel panel-surface" aria-label="FSR readings">
-        <div class="panel-head"><div><p class="eyebrow">ADC → VOLTAGE</p><h2>FSR 压力传感器读数</h2></div><span>F<sub>0</sub>–F<sub>7</sub> · force conversion disabled</span></div>
+        <div class="panel-head"><div><p class="eyebrow" data-i18n="eyebrow_adc_voltage">ADC → VOLTAGE</p><h2 data-i18n="fsr_heading">FSR Pressure Sensor Readings</h2></div><span data-i18n="fsr_note">F0–F7 · force conversion disabled</span></div>
         <div id="forceMetrics" class="force-grid"></div>
       </section>
 
       <section class="panel panel-surface recording" aria-label="Experiment recording" hidden>
         <div class="panel-head">
-          <div><p class="eyebrow">SERVER-SIDE STREAMING</p><h2>Experiment Recording</h2></div>
+          <div><p class="eyebrow" data-i18n="eyebrow_server_streaming">SERVER-SIDE STREAMING</p><h2 data-i18n="recording_section_title">Experiment Recording</h2></div>
           <span id="recordTime" class="record-time">00:00:00</span>
         </div>
-        <p class="muted recording-copy">Only samples received after Start Recording are written. The local service keeps writing if this tab is slow, suspended, or closed.</p>
+        <p class="muted recording-copy" data-i18n="recording_copy">Only samples received after Start Recording are written. The local service keeps writing if this tab is slow, suspended, or closed.</p>
         <div class="record-fields">
-          <label class="control-group">Recording folder name <small>optional</small>
-            <input id="folderName" maxlength="100" placeholder="e.g. subject-01_trial-03" />
+          <label class="control-group"><span data-i18n="record_folder">Recording Folder</span> <small data-i18n="optional_label">optional</small>
+            <input id="folderName" maxlength="100" data-i18n-placeholder="folder_placeholder" placeholder="e.g. subject-01_trial-03" />
           </label>
-          <label class="control-group grow">Experiment notes <small>optional</small>
-            <input id="note" maxlength="1000" placeholder="Mounting, load, motion, operator…" />
+          <label class="control-group grow"><span data-i18n="experiment_note">Experiment Notes</span> <small data-i18n="optional_label">optional</small>
+            <input id="note" maxlength="1000" data-i18n-placeholder="note_placeholder" placeholder="Mounting, load, motion, operator…" />
           </label>
         </div>
         <div class="record-actions">
-          <button id="record" type="button" disabled>Start Recording</button>
-          <button id="stop" class="secondary" type="button" disabled>Stop &amp; Save</button>
-          <strong id="recordStatus">Not recording</strong>
+          <button id="record" type="button" disabled data-i18n="record_text">Start Recording</button>
+          <button id="stop" class="secondary" type="button" disabled data-i18n="stop_save_text">Stop &amp; Save</button>
+          <strong id="recordStatus" data-i18n="not_recording_status">Not recording</strong>
         </div>
-        <p id="recordPath" class="path">Save location: local data directory</p>
+        <p id="recordPath" class="path" data-i18n="record_path">Save location: local data directory</p>
       </section>
 
       <section class="panel panel-surface" aria-label="Kinematic charts" hidden data-imu>
-        <div class="panel-head"><div><p class="eyebrow">LIVE WAVEFORMS</p><h2>运动信号波形</h2></div><span>Bounded and downsampled for long sessions</span></div>
+        <div class="panel-head"><div><p class="eyebrow" data-i18n="eyebrow_live_waveforms">LIVE WAVEFORMS</p><h2 data-i18n="imu_motion_charts">Motion Signal Waveforms</h2></div><span data-i18n="imu_chart_note">Bounded and downsampled for long sessions</span></div>
         <div id="kinematicCharts" class="chart-grid"></div>
       </section>
 
       <section class="panel panel-surface" aria-label="FSR chart">
-        <div class="panel-head"><div><p class="eyebrow">LIVE WAVEFORMS</p><h2>FSR 信号波形</h2></div><span>F<sub>0</sub>–F<sub>7</sub> (V)</span></div>
+        <div class="panel-head"><div><p class="eyebrow" data-i18n="eyebrow_live_waveforms">LIVE WAVEFORMS</p><h2 data-i18n="fsr_chart_title">FSR Signal Waveform</h2></div><span>F<sub>0</sub>–F<sub>7</sub> (V)</span></div>
         <div id="mechanicalCharts" class="chart-grid single-chart"></div>
       </section>
 
-      <footer class="muted">
-        8 路 FSR 由 ESP32-WROOM-32E 的 ADC 采集，经 USB 串口以 921600 baud 发送。FSR 电压 = ADC / 4095 × 3.3 V。GPIO 32/33/34/35 为 ADC1，GPIO 25/26/27/13 为 ADC2；本固件不使用 Wi-Fi，因此 ADC2 可用。记录与 ZIP 导出由本机 Python 服务完成。
+      <footer class="muted" data-i18n="footer_note">
+        8 FSR channels are sampled by the ESP32-WROOM-32E ADC and sent over USB serial at 921600 baud. FSR voltage = ADC / 4095 × 3.3 V. GPIO 32/33/34/35 are ADC1; GPIO 25/26/27/13 are ADC2. This firmware does not use Wi-Fi, so ADC2 is available. Recording and ZIP export are handled by the local Python service.
       </footer>
     </main>
-    <script src="./app.js" defer></script>
+    <script src="./app.js?v=20261103-i18n" defer></script>
   </body>
 </html>
