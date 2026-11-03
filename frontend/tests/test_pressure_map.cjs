@@ -107,3 +107,17 @@ test('view switching preserves access to the monitor and recording controls', ()
   assert.equal(nodes.pressureTab.tabIndex, -1);
   assert.ok(nodes.record.listeners.click);
 });
+
+test('recorded data view is reachable and keeps the session controls usable', () => {
+  const { showView, nodes } = page();
+  showView('analysis');
+  assert.equal(nodes.pressureView.hidden, true);
+  assert.equal(nodes.monitorView.hidden, true);
+  assert.equal(nodes.analysisView.hidden, false);
+  assert.equal(nodes.analysisTab.attributes['aria-selected'], 'true');
+  assert.equal(nodes.analysisTab.tabIndex, 0);
+  assert.equal(nodes.analysisView.hidden, false);
+  assert.ok(nodes.analysisChoose.listeners.click);
+  assert.ok(nodes.analysisFile.listeners.change);
+  assert.ok(nodes.analysisDrop.listeners.drop);
+});

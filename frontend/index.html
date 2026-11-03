@@ -4,7 +4,8 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title data-i18n="page_title">8-Channel FSR Real-Time Acquisition · ESP32-WROOM-32E</title>
   <link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="duo.css">
-  <script src="duo.js?v=20261103-i18n" defer></script>
+  <script src="analysis.js?v=20261103-analysis" defer></script>
+  <script src="duo.js?v=20261103-analysis" defer></script>
 </head>
 <body>
   <main class="duo-shell">
@@ -38,6 +39,7 @@
     <nav class="view-tabs" role="tablist" aria-label="Views">
       <button id="pressureTab" type="button" role="tab" aria-selected="true" aria-controls="pressureView" data-i18n="toggle_pressure">Pressure Distribution</button>
       <button id="monitorTab" type="button" role="tab" aria-selected="false" aria-controls="monitorView" tabindex="-1" data-i18n="monitor_title">Connection, Readings &amp; Waveform</button>
+      <button id="analysisTab" type="button" role="tab" aria-selected="false" aria-controls="analysisView" tabindex="-1" data-i18n="analysis_tab">Recorded Data</button>
     </nav>
     <section id="pressureView" class="pressure-panel panel-surface" role="tabpanel" aria-labelledby="pressureTab">
       <header class="pressure-heading">
@@ -104,6 +106,52 @@
         <p id="detail" class="device-detail" data-i18n="no_samples">No samples</p>
         <iframe src="device.html" title="8-Channel FSR: connection, readings and waveform" data-i18n-title="iframe_title"></iframe>
       </article>
+    </section>
+    <section id="analysisView" class="analysis-panel panel-surface" role="tabpanel" aria-labelledby="analysisTab" hidden>
+      <header class="analysis-heading">
+        <div>
+          <p class="eyebrow" data-i18n="analysis_eyebrow">FSR / RECORDING REVIEW</p>
+          <h2 data-i18n="analysis_title">Recorded Data · Peaks &amp; Channel Range</h2>
+          <p class="analysis-subtitle" data-i18n="analysis_subtitle">Load a downloaded ZIP or a samples.csv file. All analysis happens in this browser.</p>
+        </div>
+        <div class="analysis-controls">
+          <input id="analysisFile" type="file" accept=".zip,.csv,application/zip,text/csv" hidden>
+          <button id="analysisChoose" type="button" class="secondary" data-i18n="analysis_choose">Choose ZIP or CSV</button>
+          <label class="control-group analysis-sensitivity"><span data-i18n="analysis_sensitivity">Peak Sensitivity</span>
+            <select id="analysisSensitivity" aria-label="Peak Sensitivity">
+              <option value="0.04" data-i18n="analysis_sensitivity_high">High · more peaks</option>
+              <option value="0.08" selected data-i18n="analysis_sensitivity_balanced">Balanced</option>
+              <option value="0.18" data-i18n="analysis_sensitivity_low">Low · strongest peaks</option>
+            </select>
+          </label>
+        </div>
+      </header>
+      <div id="analysisDrop" class="analysis-drop" role="button" tabindex="0" aria-controls="analysisFile">
+        <strong data-i18n="analysis_drop_title">Drop a recording ZIP here</strong>
+        <span data-i18n="analysis_drop_hint">or click to choose a ZIP / samples.csv. Files stay in this browser.</span>
+      </div>
+      <p id="analysisStatus" class="analysis-status" role="status" data-i18n="analysis_idle">No recording loaded yet.</p>
+      <div id="analysisResults" class="analysis-results" hidden>
+        <div id="analysisSummary" class="analysis-summary"></div>
+        <div class="analysis-chart-header">
+          <div id="analysisLegend" class="analysis-legend"></div>
+          <p class="analysis-chart-hint" data-i18n="analysis_chart_hint">Hover the chart for values; hover a peak marker for min/max. Peak markers come from the maximum across all 8 channels.</p>
+        </div>
+        <div class="analysis-chart-wrap">
+          <canvas id="analysisChart" class="analysis-chart" width="1200" height="380" tabindex="0" aria-label="FSR recording chart"></canvas>
+          <div id="analysisTooltip" class="analysis-tooltip" role="tooltip" hidden></div>
+        </div>
+        <div class="analysis-tables">
+          <section class="analysis-table-section">
+            <h3 data-i18n="analysis_channel_table">Channel Range</h3>
+            <div id="analysisChannelTable" class="analysis-table-wrap"></div>
+          </section>
+          <section class="analysis-table-section">
+            <h3 data-i18n="analysis_peak_table">Detected Peaks</h3>
+            <div id="analysisPeakTable" class="analysis-table-wrap"></div>
+          </section>
+        </div>
+      </div>
     </section>
   </main>
 </body>

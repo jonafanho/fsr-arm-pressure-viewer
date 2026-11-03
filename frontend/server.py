@@ -364,7 +364,7 @@ class Handler(core.Handler):
                 return self.send_json(dict(ports=ports, available=core.serial is not None))
             if url.path == '/api/discover':
                 return self.send_json(dict(devices=core.discover()))
-            if url.path not in ('/', '/index.html', '/device.html', '/app.js', '/duo.js', '/styles.css', '/duo.css', '/public/loc/en.json', '/public/loc/zh-CN.json', '/public/loc/zh-TW.json'):
+            if url.path not in ('/', '/index.html', '/device.html', '/app.js', '/duo.js', '/duo.css', '/analysis.js', '/styles.css', '/public/loc/en.json', '/public/loc/zh-CN.json', '/public/loc/zh-TW.json'):
                 return self.send_error(HTTPStatus.NOT_FOUND)
             return core.SimpleHTTPRequestHandler.do_GET(self)
         except Exception as error:
